@@ -1417,3 +1417,132 @@ textarea.input {
 }
 
 
+
+/* =========================================
+   CR-001 Advanced Search & Filtering
+   ========================================= */
+
+/* Filter inputs */
+.filter-bar .input {
+  flex: 1;
+  min-width: 180px;
+}
+
+/* Clear All Filters button */
+.clear-filter-btn {
+  border: 1px solid var(--color-danger);
+  background-color: var(--color-white);
+  color: var(--color-danger);
+
+  border-radius: var(--radius-sm);
+
+  padding: 10px 16px;
+
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: bold;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+}
+
+.clear-filter-btn:hover {
+  background-color: var(--color-danger);
+  color: var(--color-white);
+}
+
+
+/* Active filter chips */
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+
+  margin: -10px 0 20px;
+}
+
+
+/* Individual filter chip */
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+
+  background-color: #eff6ff;
+  color: #1e40af;
+
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+
+  padding: 5px 12px;
+
+  font-size: 13px;
+  font-weight: bold;
+}
+
+
+/* Result counter */
+.result-count {
+  margin-top: 8px;
+  margin-bottom: 16px;
+
+  color: var(--color-muted);
+
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+
+/* Filter input focus */
+.filter-bar .input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+
+/* Responsive filter layout */
+@media (max-width: 900px) {
+
+  .filter-bar {
+    align-items: stretch;
+  }
+
+  .filter-bar .input {
+    min-width: 100%;
+  }
+
+  .clear-filter-btn {
+    width: 100%;
+  }
+
+}
+
+
+/* Mobile filter layout */
+@media (max-width: 600px) {
+
+  .filter-bar {
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .filter-bar .input {
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  .filter-chip {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  .filter-chips {
+    margin-top: -4px;
+  }
+
+}
+

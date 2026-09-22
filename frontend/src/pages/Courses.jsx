@@ -12,11 +12,15 @@ function Courses() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // ---------- Filter states ----------
   const [searchText, setSearchText] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedLevel, setSelectedLevel] = useState("All");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
 
 
-  // ---------- Load courses from the backend ----------
+  // ---------- Load courses from backend ----------
   useEffect(() => {
 
     const getCourses = async () => {
@@ -25,8 +29,7 @@ function Courses() {
 
         const response = await api.get("/courses");
 
-        // The backend always puts the array inside "courses".
-        setCourses(response.data.courses);
+        setCourses(response.data.courses || []);
 
       } catch (error) {
 
@@ -47,27 +50,107 @@ function Courses() {
   }, []);
 
 
-  // ---------- Build the category list from the loaded courses ----------
+  // ---------- Build category list ----------
   const categories = [
     "All",
-    ...new Set(courses.map((course) => course.category)),
+    ...new Set(
+      courses
+        .map((course) => course.category)
+        .filter(Boolean)
+    ),
   ];
 
 
-  // ---------- Apply the search text and category filter ----------
+  // ---------- Level list ----------
+  const levels = [
+    "All",
+    "Beginner",
+    "Intermediate",
+    "Advanced",
+  ];
+
+
+  // ---------- Apply all filters ----------
   const filteredCourses = courses.filter((course) => {
 
-    const matchesSearch =
-      course.title.toLowerCase().includes(searchText.toLowerCase()) ||
-      course.category.toLowerCase().includes(searchText.toLowerCase());
+    // Convert values safely to strings.
+    // This prevents errors when description or duration is null.
+    const title = String(course.title || "");
+    const category = String(course.category || "");
+    const level = String(course.level || "");
+    const description = String(course.description || "");
+    const duration = String(course.duration || "");
 
+    const search = searchText.toLowerCase().trim();
+
+    // Search title, category, level, description and duration
+    const matchesSearch =
+      title.toLowerCase().includes(search) ||
+      category.toLowerCase().includes(search) ||
+      level.toLowerCase().includes(search) ||
+      description.toLowerCase().includes(search) ||
+      duration.toLowerCase().includes(search);
+
+
+    // Category filter
     const matchesCategory =
       selectedCategory === "All" ||
-      course.category === selectedCategory;
+      category === selectedCategory;
 
-    // Keep the course only if BOTH filters match
-    return matchesSearch && matchesCategory;
+
+    // Level filter
+    const matchesLevel =
+      selectedLevel === "All" ||
+      level === selectedLevel;
+
+
+    // Price
+    const coursePrice = Number(course.price);
+
+
+    // Minimum price
+    const matchesMinPrice =
+      minPrice === "" ||
+      coursePrice >= Number(minPrice);
+
+
+    // Maximum price
+    const matchesMaxPrice =
+      maxPrice === "" ||
+      coursePrice <= Number(maxPrice);
+
+
+    // All filters must match
+    return (
+      matchesSearch &&
+      matchesCategory &&
+      matchesLevel &&
+      matchesMinPrice &&
+      matchesMaxPrice
+    );
+
   });
+
+
+  // ---------- Clear all filters ----------
+  const clearAllFilters = () => {
+
+    setSearchText("");
+    setSelectedCategory("All");
+    setSelectedLevel("All");
+    setMinPrice("");
+    setMaxPrice("");
+
+  };
+
+
+  // ---------- Check whether any filter is active ----------
+  const hasActiveFilters =
+    searchText.trim() !== "" ||
+    selectedCategory !== "All" ||
+    selectedLevel !== "All" ||
+    minPrice !== "" ||
+    maxPrice !== "";
 
 
   return (
@@ -80,10 +163,13 @@ function Courses() {
         <div className="page-header">
 
           <div>
+
             <h1>Our Courses</h1>
+
             <p className="page-subtitle">
               Browse the full catalogue and view the details of any course.
             </p>
+
           </div>
 
         </div>
@@ -95,78 +181,225 @@ function Courses() {
 
           <div className="filter-bar">
 
+            {/* Search */}
+
             <input
               type="text"
               className="input"
-              placeholder="Search by course name or category..."
+              placeholder="Search by title, category, level, description or duration..."
               value={searchText}
               onChange={(event) => setSearchText(event.target.value)}
             />
 
+
+            {/* Category */}
+
             <select
               className="input"
               value={selectedCategory}
-              onChange={(event) => setSelectedCategory(event.target.value)}
+              onChange={(event) =>
+                setSelectedCategory(event.target.value)
+              }
             >
+
               {categories.map((category) => (
+
                 <option key={category} value={category}>
                   {category}
                 </option>
+
               ))}
+
             </select>
+
+
+            {/* Level */}
+
+            <select
+              className="input"
+              value={selectedLevel}
+              onChange={(event) =>
+                setSelectedLevel(event.target.value)
+              }
+            >
+
+              {levels.map((level) => (
+
+                <option key={level} value={level}>
+                  {level === "All" ? "All Levels" : level}
+                </option>
+
+              ))}
+
+            </select>
+
+
+            {/* Minimum Price */}
+
+            <input
+              type="number"
+              className="input"
+              placeholder="Minimum price"
+              min="0"
+              value={minPrice}
+              onChange={(event) => setMinPrice(event.target.value)}
+            />
+
+
+            {/* Maximum Price */}
+
+            <input
+              type="number"
+              className="input"
+              placeholder="Maximum price"
+              min="0"
+              value={maxPrice}
+              onChange={(event) => setMaxPrice(event.target.value)}
+            />
+
+
+            {/* Clear All */}
+
+            {hasActiveFilters && (
+
+              <button
+                type="button"
+                className="clear-filter-btn"
+                onClick={clearAllFilters}
+              >
+                Clear All Filters
+              </button>
+
+            )}
 
           </div>
 
         )}
 
 
+        {/* ---------- Active filter chips ---------- */}
+
+        {!loading &&
+          !error &&
+          courses.length > 0 &&
+          hasActiveFilters && (
+
+            <div className="filter-chips">
+
+              {searchText.trim() !== "" && (
+                <span className="filter-chip">
+                  Search: {searchText}
+                </span>
+              )}
+
+              {selectedCategory !== "All" && (
+                <span className="filter-chip">
+                  Category: {selectedCategory}
+                </span>
+              )}
+
+              {selectedLevel !== "All" && (
+                <span className="filter-chip">
+                  Level: {selectedLevel}
+                </span>
+              )}
+
+              {minPrice !== "" && (
+                <span className="filter-chip">
+                  Min Price: {minPrice}
+                </span>
+              )}
+
+              {maxPrice !== "" && (
+                <span className="filter-chip">
+                  Max Price: {maxPrice}
+                </span>
+              )}
+
+            </div>
+
+          )}
+
+
         {/* ---------- Loading state ---------- */}
 
         {loading && (
-          <p className="loading">Loading courses...</p>
+          <p className="loading">
+            Loading courses...
+          </p>
         )}
 
 
         {/* ---------- Error state ---------- */}
 
         {error && !loading && (
-          <p className="error">{error}</p>
-        )}
-
-
-        {/* ---------- Empty state ---------- */}
-
-        {!loading && !error && courses.length === 0 && (
-          <p className="empty">
-            There are no courses available at the moment.
+          <p className="error">
+            {error}
           </p>
         )}
 
 
-        {!loading && !error && courses.length > 0 && filteredCourses.length === 0 && (
-          <p className="empty">
-            No courses match your search. Try a different keyword.
-          </p>
-        )}
+        {/* ---------- No courses exist ---------- */}
+
+        {!loading &&
+          !error &&
+          courses.length === 0 && (
+
+            <p className="empty">
+              There are no courses available at the moment.
+            </p>
+
+          )}
+
+
+        {/* ---------- Courses exist but no filter matches ---------- */}
+
+        {!loading &&
+          !error &&
+          courses.length > 0 &&
+          filteredCourses.length === 0 && (
+
+            <p className="empty">
+              No courses match the selected filters.
+              Try changing or clearing your filters.
+            </p>
+
+          )}
 
 
         {/* ---------- Course list ---------- */}
 
-        {!loading && !error && filteredCourses.length > 0 && (
+        {!loading &&
+          !error &&
+          filteredCourses.length > 0 && (
 
-          <>
-            <p className="result-count">
-              Showing {filteredCourses.length} of {courses.length} courses
-            </p>
+            <>
 
-            <div className="course-grid">
-              {filteredCourses.map((course) => (
-                <CourseCard key={course.id} course={course} />
-              ))}
-            </div>
-          </>
+              {/* Result counter */}
 
-        )}
+              <p className="result-count">
+                Showing {filteredCourses.length} of {courses.length} courses
+              </p>
+
+
+              {/* Course cards */}
+
+              <div className="course-grid">
+
+                {filteredCourses.map((course) => (
+
+                  <CourseCard
+                    key={course.id}
+                    course={course}
+                  />
+
+                ))}
+
+              </div>
+
+            </>
+
+          )}
 
       </div>
 
@@ -177,3 +410,4 @@ function Courses() {
 }
 
 export default Courses;
+

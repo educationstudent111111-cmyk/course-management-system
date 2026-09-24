@@ -7,6 +7,8 @@ import {
   FaSave,
   FaTimes,
   FaTrash,
+  FaSearch,
+  FaUndo,
 } from "react-icons/fa";
 
 import api from "../services/api";
@@ -24,7 +26,12 @@ const EMPTY_COURSE = {
   description: "",
 };
 
-const LEVEL_OPTIONS = ["Beginner", "Intermediate", "Advanced"];
+
+const LEVEL_OPTIONS = [
+  "Beginner",
+  "Intermediate",
+  "Advanced",
+];
 
 
 // Load the course list.
@@ -58,7 +65,28 @@ function ManageCourses() {
   const [saving, setSaving] = useState(false);
 
 
-  // ---------- Load the course list once, when the page opens ----------
+  // =========================================================
+  // CR-003 SEARCH / FILTER / SORT STATE
+  // =========================================================
+
+  // Search text
+  const [searchText, setSearchText] = useState("");
+
+  // Category filter
+  const [selectedCategory, setSelectedCategory] = useState("All");
+
+  // Level filter
+  const [selectedLevel, setSelectedLevel] = useState("All");
+
+  // Sorting
+  const [sortColumn, setSortColumn] = useState(null);
+  const [sortDirection, setSortDirection] = useState("asc");
+
+
+  // =========================================================
+  // LOAD COURSES
+  // =========================================================
+
   useEffect(() => {
 
     const loadCourses = async () => {
@@ -86,13 +114,258 @@ function ManageCourses() {
   }, []);
 
 
-  // ---------- Reload the list after create / update / delete ----------
+  // =========================================================
+  // RELOAD COURSES AFTER CREATE / UPDATE / DELETE
+  // =========================================================
+
   const refreshCourses = async () => {
-    setCourses(await fetchAllCourses());
+
+    const updatedCourses = await fetchAllCourses();
+
+    setCourses(updatedCourses);
   };
 
 
-  // ---------- Form helpers ----------
+  // =========================================================
+  // CR-003 - GET UNIQUE CATEGORIES
+  // =========================================================
+
+  const categoryOptions = [
+    "All",
+    ...Array.from(
+      new Set(
+        courses
+          .map((course) =>
+            String(course.category || "").trim()
+          )
+          .filter(Boolean)
+      )
+    ).sort((a, b) =>
+      a.localeCompare(b, undefined, {
+        sensitivity: "base",
+      })
+    ),
+  ];
+
+
+  // =========================================================
+  // CR-003 - SEARCH + FILTER + SORT
+  // =========================================================
+
+  const displayedCourses = [...courses]
+
+    // ---------- SEARCH ----------
+    .filter((course) => {
+
+      const search = searchText
+        .trim()
+        .toLowerCase();
+
+      if (!search) {
+        return true;
+      }
+
+      const title = String(
+        course.title || ""
+      ).toLowerCase();
+
+      const category = String(
+        course.category || ""
+      ).toLowerCase();
+
+      const id = String(
+        course.id || ""
+      ).toLowerCase();
+
+      return (
+        title.includes(search) ||
+        category.includes(search) ||
+        id.includes(search)
+      );
+    })
+
+    // ---------- CATEGORY FILTER ----------
+    .filter((course) => {
+
+      if (selectedCategory === "All") {
+        return true;
+      }
+
+      return (
+        String(course.category || "")
+          .toLowerCase() ===
+        selectedCategory.toLowerCase()
+      );
+    })
+
+    // ---------- LEVEL FILTER ----------
+    .filter((course) => {
+
+      if (selectedLevel === "All") {
+        return true;
+      }
+
+      return (
+        String(course.level || "")
+          .toLowerCase() ===
+        selectedLevel.toLowerCase()
+      );
+    })
+
+    // ---------- SORT ----------
+    .sort((a, b) => {
+
+      if (!sortColumn) {
+        return 0;
+      }
+
+      let valueA;
+      let valueB;
+
+
+      // Course ID
+      if (sortColumn === "id") {
+
+        valueA = String(a.id || "");
+        valueB = String(b.id || "");
+
+      }
+
+
+      // Title
+      else if (sortColumn === "title") {
+
+        valueA = String(a.title || "");
+        valueB = String(b.title || "");
+
+      }
+
+
+      // Category
+      else if (sortColumn === "category") {
+
+        valueA = String(a.category || "");
+        valueB = String(b.category || "");
+
+      }
+
+
+      // Level
+      else if (sortColumn === "level") {
+
+        valueA = String(a.level || "");
+        valueB = String(b.level || "");
+
+      }
+
+
+      // Duration
+      else if (sortColumn === "duration") {
+
+        valueA = String(a.duration || "");
+        valueB = String(b.duration || "");
+
+      }
+
+
+      // Price
+      else if (sortColumn === "price") {
+
+        valueA = Number(a.price || 0);
+        valueB = Number(b.price || 0);
+
+        const numericResult =
+          valueA - valueB;
+
+        return sortDirection === "asc"
+          ? numericResult
+          : -numericResult;
+      }
+
+
+      // ---------- TEXT SORTING ----------
+      if (typeof valueA === "string") {
+
+        const result = valueA.localeCompare(
+          valueB,
+          undefined,
+          {
+            sensitivity: "base",
+            numeric: true,
+          }
+        );
+
+        return sortDirection === "asc"
+          ? result
+          : -result;
+      }
+
+
+      return 0;
+    });
+
+
+  // =========================================================
+  // CR-003 - SORT HANDLER
+  // =========================================================
+
+  const handleSort = (column) => {
+
+    if (sortColumn === column) {
+
+      // Same column → reverse direction
+      setSortDirection(
+        sortDirection === "asc"
+          ? "desc"
+          : "asc"
+      );
+
+    } else {
+
+      // New column → start with ascending
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+
+  // =========================================================
+  // CR-003 - SORT INDICATOR
+  // =========================================================
+
+  const getSortIndicator = (column) => {
+
+    if (sortColumn !== column) {
+      return "";
+    }
+
+    return sortDirection === "asc"
+      ? " ↑"
+      : " ↓";
+  };
+
+
+  // =========================================================
+  // CR-003 - RESET FILTERS
+  // =========================================================
+
+  const resetFilters = () => {
+
+    setSearchText("");
+
+    setSelectedCategory("All");
+
+    setSelectedLevel("All");
+
+    setSortColumn(null);
+
+    setSortDirection("asc");
+  };
+
+
+  // =========================================================
+  // FORM HELPERS
+  // =========================================================
 
   const handleChange = (event) => {
 
@@ -104,7 +377,6 @@ function ManageCourses() {
     });
 
     // Remove the server error for the field
-    // when the user starts correcting it.
     setFieldErrors((previous) => ({
       ...previous,
       [name]: "",
@@ -114,11 +386,14 @@ function ManageCourses() {
   };
 
 
-  // ---------- Open Add Form ----------
+  // =========================================================
+  // OPEN ADD FORM
+  // =========================================================
 
   const openAddForm = () => {
 
     setShowForm(true);
+
     setEditingId(null);
 
     setFormData({
@@ -126,20 +401,25 @@ function ManageCourses() {
     });
 
     setFormError("");
+
     setFieldErrors({});
+
     setError("");
+
     setSuccess("");
   };
 
 
-  // ---------- Open Edit Form ----------
+  // =========================================================
+  // OPEN EDIT FORM
+  // =========================================================
 
   const openEditForm = (course) => {
 
     setShowForm(true);
+
     setEditingId(course.id);
 
-    // Fill the form with existing course values.
     setFormData({
       title: course.title || "",
       category: course.category || "",
@@ -151,17 +431,23 @@ function ManageCourses() {
     });
 
     setFormError("");
+
     setFieldErrors({});
+
     setError("");
+
     setSuccess("");
   };
 
 
-  // ---------- Close Form ----------
+  // =========================================================
+  // CLOSE FORM
+  // =========================================================
 
   const closeForm = () => {
 
     setShowForm(false);
+
     setEditingId(null);
 
     setFormData({
@@ -169,26 +455,29 @@ function ManageCourses() {
     });
 
     setFormError("");
+
     setFieldErrors({});
   };
 
 
-  // ---------- Create / Update ----------
+  // =========================================================
+  // CREATE / UPDATE
+  // =========================================================
 
   const handleSubmit = async (event) => {
 
-    // Stop browser from reloading the page.
     event.preventDefault();
 
     setFormError("");
+
     setError("");
+
     setSuccess("");
+
     setFieldErrors({});
 
 
-    // ---------- Client-side validation ----------
-    // This is only an additional user-friendly check.
-    // Backend validation remains the final protection.
+    // ---------- CLIENT-SIDE VALIDATION ----------
 
     if (
       !formData.title.trim() ||
@@ -227,7 +516,8 @@ function ManageCourses() {
     }
 
 
-    // The backend expects price to be a number.
+    // ---------- COURSE PAYLOAD ----------
+
     const coursePayload = {
 
       title: formData.title.trim(),
@@ -253,7 +543,7 @@ function ManageCourses() {
 
       if (editingId) {
 
-        // ---------- Update existing course ----------
+        // ---------- UPDATE ----------
 
         const response = await api.put(
           `/courses/${editingId}`,
@@ -266,7 +556,7 @@ function ManageCourses() {
 
       } else {
 
-        // ---------- Create new course ----------
+        // ---------- CREATE ----------
 
         const response = await api.post(
           "/courses",
@@ -279,29 +569,19 @@ function ManageCourses() {
       }
 
 
-      // Close form after successful save.
+      // IMPORTANT:
+      // Search, filters and sorting states
+      // are NOT reset here.
+
       closeForm();
 
-      // Show fresh data from backend.
       await refreshCourses();
 
     } catch (error) {
 
-      // ---------- SERVER-SIDE VALIDATION ERROR ----------
-
       const responseData =
         error.response?.data;
 
-
-      // Backend field-level errors.
-      //
-      // Example:
-      // {
-      //   errors: {
-      //     title: "Course title already exists.",
-      //     price: "Price must be greater than or equal to 0."
-      //   }
-      // }
 
       if (responseData?.errors) {
 
@@ -311,7 +591,6 @@ function ManageCourses() {
       }
 
 
-      // General backend error message.
       setFormError(
         responseData?.message ||
         "Could not save the course. Please try again."
@@ -324,11 +603,12 @@ function ManageCourses() {
   };
 
 
-  // ---------- Delete ----------
+  // =========================================================
+  // DELETE
+  // =========================================================
 
   const handleDelete = async (course) => {
 
-    // Always confirm before destructive action.
     const confirmed = window.confirm(
       `Delete "${course.title}"? This cannot be undone.`
     );
@@ -340,6 +620,7 @@ function ManageCourses() {
 
 
     setError("");
+
     setSuccess("");
 
 
@@ -353,6 +634,10 @@ function ManageCourses() {
         response.data.message
       );
 
+      // IMPORTANT:
+      // Search, filters and sorting states
+      // are preserved.
+
       await refreshCourses();
 
     } catch (error) {
@@ -365,6 +650,10 @@ function ManageCourses() {
   };
 
 
+  // =========================================================
+  // RENDER
+  // =========================================================
+
   return (
 
     <>
@@ -375,7 +664,9 @@ function ManageCourses() {
       <div className="container">
 
 
-        {/* ---------- Page Header ---------- */}
+        {/* =====================================================
+            PAGE HEADER
+        ====================================================== */}
 
         <div className="page-header">
 
@@ -418,22 +709,31 @@ function ManageCourses() {
         </div>
 
 
-        {/* ---------- Success / General Error Messages ---------- */}
+        {/* =====================================================
+            SUCCESS / ERROR
+        ====================================================== */}
 
         {success && (
+
           <p className="success">
             {success}
           </p>
+
         )}
 
+
         {error && (
+
           <p className="error">
             {error}
           </p>
+
         )}
 
 
-        {/* ---------- Add / Edit Form ---------- */}
+        {/* =====================================================
+            ADD / EDIT FORM
+        ====================================================== */}
 
         {showForm && (
 
@@ -443,10 +743,12 @@ function ManageCourses() {
             <div className="section-card-header">
 
               <h2>
+
                 {editingId
                   ? "Edit Course"
                   : "New Course"
                 }
+
               </h2>
 
             </div>
@@ -458,7 +760,7 @@ function ManageCourses() {
             >
 
 
-              {/* ---------- Title + Category ---------- */}
+              {/* ---------- TITLE + CATEGORY ---------- */}
 
               <div className="form-row">
 
@@ -531,7 +833,7 @@ function ManageCourses() {
               </div>
 
 
-              {/* ---------- Level + Duration + Price ---------- */}
+              {/* ---------- LEVEL + DURATION + PRICE ---------- */}
 
               <div className="form-row">
 
@@ -652,7 +954,7 @@ function ManageCourses() {
               </div>
 
 
-              {/* ---------- Image ---------- */}
+              {/* ---------- IMAGE ---------- */}
 
               <div className="form-group">
 
@@ -687,7 +989,7 @@ function ManageCourses() {
               </div>
 
 
-              {/* ---------- Description ---------- */}
+              {/* ---------- DESCRIPTION ---------- */}
 
               <div className="form-group">
 
@@ -722,7 +1024,7 @@ function ManageCourses() {
               </div>
 
 
-              {/* ---------- General Form Error ---------- */}
+              {/* ---------- GENERAL FORM ERROR ---------- */}
 
               {formError && (
 
@@ -733,7 +1035,7 @@ function ManageCourses() {
               )}
 
 
-              {/* ---------- Form Actions ---------- */}
+              {/* ---------- FORM ACTIONS ---------- */}
 
               <div className="form-actions">
 
@@ -780,20 +1082,26 @@ function ManageCourses() {
         )}
 
 
-        {/* ---------- Course Table ---------- */}
+        {/* =====================================================
+            CR-003 SEARCH / FILTER / SORT CONTROLS
+        ====================================================== */}
 
         <section className="section-card">
 
 
           <div className="section-card-header">
 
-            <h2>
-              All Courses
-              {courses.length > 0
-                ? ` (${courses.length})`
-                : ""
-              }
-            </h2>
+            <div>
+
+              <h2>
+                Course List
+              </h2>
+
+              <p className="page-subtitle">
+                Search, filter and sort courses.
+              </p>
+
+            </div>
 
 
             <Link
@@ -810,6 +1118,168 @@ function ManageCourses() {
           </div>
 
 
+          {/* ---------- SEARCH ---------- */}
+
+          <div className="course-controls">
+
+
+            <div className="course-search">
+
+              <label htmlFor="course-search">
+                Search Courses
+              </label>
+
+
+              <div className="search-input-wrapper">
+
+                <FaSearch />
+
+                <input
+                  id="course-search"
+                  type="text"
+                  className="input"
+                  value={searchText}
+                  onChange={(event) =>
+                    setSearchText(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Search by title, category or course ID..."
+                />
+
+              </div>
+
+            </div>
+
+
+            {/* ---------- CATEGORY FILTER ---------- */}
+
+            <div className="course-filter">
+
+              <label htmlFor="category-filter">
+                Category
+              </label>
+
+
+              <select
+                id="category-filter"
+                className="input"
+                value={selectedCategory}
+                onChange={(event) =>
+                  setSelectedCategory(
+                    event.target.value
+                  )
+                }
+              >
+
+                {categoryOptions.map(
+                  (category) => (
+
+                    <option
+                      key={category}
+                      value={category}
+                    >
+                      {category}
+                    </option>
+
+                  )
+                )}
+
+              </select>
+
+            </div>
+
+
+            {/* ---------- LEVEL FILTER ---------- */}
+
+            <div className="course-filter">
+
+              <label htmlFor="level-filter">
+                Level
+              </label>
+
+
+              <select
+                id="level-filter"
+                className="input"
+                value={selectedLevel}
+                onChange={(event) =>
+                  setSelectedLevel(
+                    event.target.value
+                  )
+                }
+              >
+
+                <option value="All">
+                  All
+                </option>
+
+                {LEVEL_OPTIONS.map(
+                  (level) => (
+
+                    <option
+                      key={level}
+                      value={level}
+                    >
+                      {level}
+                    </option>
+
+                  )
+                )}
+
+              </select>
+
+            </div>
+
+
+            {/* ---------- RESET ---------- */}
+
+            <div className="course-filter-button">
+
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={resetFilters}
+              >
+
+                <FaUndo />
+
+                Reset Filters
+
+              </button>
+
+            </div>
+
+          </div>
+
+
+          {/* ---------- RESULT COUNTER ---------- */}
+
+          <div className="course-result-info">
+
+            Showing{" "}
+            <strong>
+              {displayedCourses.length}
+            </strong>{" "}
+            of{" "}
+            <strong>
+              {courses.length}
+            </strong>{" "}
+            courses
+
+          </div>
+
+
+        </section>
+
+
+        {/* =====================================================
+            COURSE TABLE
+        ====================================================== */}
+
+        <section className="section-card">
+
+
           {loading && (
 
             <p className="loading">
@@ -818,6 +1288,8 @@ function ManageCourses() {
 
           )}
 
+
+          {/* ---------- NO COURSES IN DATABASE ---------- */}
 
           {!loading &&
             courses.length === 0 && (
@@ -832,8 +1304,46 @@ function ManageCourses() {
           }
 
 
+          {/* ---------- NO SEARCH/FILTER RESULTS ---------- */}
+
           {!loading &&
-            courses.length > 0 && (
+            courses.length > 0 &&
+            displayedCourses.length === 0 && (
+
+              <div className="no-results">
+
+                <h3>
+                  No courses found.
+                </h3>
+
+                <p>
+                  No courses match your current
+                  search or filter criteria.
+                </p>
+
+
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={resetFilters}
+                >
+
+                  <FaUndo />
+
+                  Reset Filters
+
+                </button>
+
+              </div>
+
+            )
+          }
+
+
+          {/* ---------- TABLE ---------- */}
+
+          {!loading &&
+            displayedCourses.length > 0 && (
 
               <div className="table-wrapper">
 
@@ -845,16 +1355,140 @@ function ManageCourses() {
 
                     <tr>
 
-                      <th>ID</th>
-                      <th>Image</th>
-                      <th>Title</th>
-                      <th>Category</th>
-                      <th>Level</th>
-                      <th>Duration</th>
-                      <th>Price</th>
+
+                      {/* ID */}
+
+                      <th>
+
+                        <button
+                          type="button"
+                          className="sort-button"
+                          onClick={() =>
+                            handleSort("id")
+                          }
+                        >
+
+                          ID
+                          {getSortIndicator("id")}
+
+                        </button>
+
+                      </th>
+
+
+                      {/* IMAGE */}
+
+                      <th>
+                        Image
+                      </th>
+
+
+                      {/* TITLE */}
+
+                      <th>
+
+                        <button
+                          type="button"
+                          className="sort-button"
+                          onClick={() =>
+                            handleSort("title")
+                          }
+                        >
+
+                          Title
+                          {getSortIndicator("title")}
+
+                        </button>
+
+                      </th>
+
+
+                      {/* CATEGORY */}
+
+                      <th>
+
+                        <button
+                          type="button"
+                          className="sort-button"
+                          onClick={() =>
+                            handleSort("category")
+                          }
+                        >
+
+                          Category
+                          {getSortIndicator("category")}
+
+                        </button>
+
+                      </th>
+
+
+                      {/* LEVEL */}
+
+                      <th>
+
+                        <button
+                          type="button"
+                          className="sort-button"
+                          onClick={() =>
+                            handleSort("level")
+                          }
+                        >
+
+                          Level
+                          {getSortIndicator("level")}
+
+                        </button>
+
+                      </th>
+
+
+                      {/* DURATION */}
+
+                      <th>
+
+                        <button
+                          type="button"
+                          className="sort-button"
+                          onClick={() =>
+                            handleSort("duration")
+                          }
+                        >
+
+                          Duration
+                          {getSortIndicator("duration")}
+
+                        </button>
+
+                      </th>
+
+
+                      {/* PRICE */}
+
+                      <th>
+
+                        <button
+                          type="button"
+                          className="sort-button"
+                          onClick={() =>
+                            handleSort("price")
+                          }
+                        >
+
+                          Price
+                          {getSortIndicator("price")}
+
+                        </button>
+
+                      </th>
+
+
+                      {/* ACTIONS */}
+
                       <th className="table-actions-column">
                         Actions
                       </th>
+
 
                     </tr>
 
@@ -863,17 +1497,22 @@ function ManageCourses() {
 
                   <tbody>
 
-                    {courses.map(
+                    {displayedCourses.map(
                       (course) => (
 
                         <tr
                           key={course.id}
                         >
 
+
+                          {/* ID */}
+
                           <td>
                             {course.id}
                           </td>
 
+
+                          {/* IMAGE */}
 
                           <td>
 
@@ -886,15 +1525,21 @@ function ManageCourses() {
                           </td>
 
 
+                          {/* TITLE */}
+
                           <td>
                             {course.title}
                           </td>
 
 
+                          {/* CATEGORY */}
+
                           <td>
                             {course.category}
                           </td>
 
+
+                          {/* LEVEL */}
 
                           <td>
 
@@ -905,15 +1550,21 @@ function ManageCourses() {
                           </td>
 
 
+                          {/* DURATION */}
+
                           <td>
                             {course.duration}
                           </td>
 
 
+                          {/* PRICE */}
+
                           <td>
                             Rs. {course.price}
                           </td>
 
+
+                          {/* ACTIONS */}
 
                           <td>
 
@@ -954,6 +1605,7 @@ function ManageCourses() {
 
                           </td>
 
+
                         </tr>
 
                       )
@@ -961,12 +1613,15 @@ function ManageCourses() {
 
                   </tbody>
 
+
                 </table>
+
 
               </div>
 
             )
           }
+
 
         </section>
 
@@ -977,6 +1632,7 @@ function ManageCourses() {
       <Footer />
 
     </>
+
   );
 }
 

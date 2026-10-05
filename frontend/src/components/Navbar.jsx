@@ -22,15 +22,34 @@ function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
 
+
+  // =====================================================
   // Mobile menu open / closed
+  // =====================================================
+
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Read the current user from localStorage on every render
+
+  // =====================================================
+  // Authentication state
+  // =====================================================
+
   const loggedIn = isLoggedIn();
   const user = getUser();
 
-  // Close the mobile menu whenever a link is clicked
-  const closeMenu = () => setMenuOpen(false);
+
+  // =====================================================
+  // Close mobile menu
+  // =====================================================
+
+  const closeMenu = () => {
+    setMenuOpen(false);
+  };
+
+
+  // =====================================================
+  // Logout
+  // =====================================================
 
   const handleLogout = () => {
 
@@ -43,9 +62,30 @@ function Navbar() {
     navigate("/");
   };
 
-  // NavLink gives us isActive so we can highlight the current page
+
+  // =====================================================
+  // NavLink active class
+  // =====================================================
+
   const linkClass = ({ isActive }) =>
-    isActive ? "nav-link active" : "nav-link";
+    isActive
+      ? "nav-link active"
+      : "nav-link";
+
+
+  // =====================================================
+  // Preserve the complete current page
+  // =====================================================
+
+  const currentPage =
+    location.pathname +
+    location.search +
+    location.hash;
+
+
+  // =====================================================
+  // JSX
+  // =====================================================
 
   return (
 
@@ -53,16 +93,32 @@ function Navbar() {
 
       <div className="navbar-inner">
 
-        {/* Brand / logo */}
-        <Link to="/" className="navbar-brand" onClick={closeMenu}>
-          <span className="navbar-brand-mark">CMS</span>
+
+        {/* =================================================
+            Brand / Logo
+            ================================================= */}
+
+        <Link
+          to="/"
+          className="navbar-brand"
+          onClick={closeMenu}
+        >
+
+          <span className="navbar-brand-mark">
+            CMS
+          </span>
+
           <span className="navbar-brand-text">
             Course Management System
           </span>
+
         </Link>
 
 
-        {/* Mobile hamburger button */}
+        {/* =================================================
+            Mobile hamburger button
+            ================================================= */}
+
         <button
           type="button"
           className="navbar-toggle"
@@ -70,113 +126,195 @@ function Navbar() {
           aria-label="Toggle navigation menu"
           aria-expanded={menuOpen}
         >
-          {menuOpen ? <FaTimes /> : <FaBars />}
+
+          {menuOpen
+            ? <FaTimes />
+            : <FaBars />
+          }
+
         </button>
 
 
-        {/* Navigation links */}
-        <nav className={menuOpen ? "navbar-links open" : "navbar-links"}>
+        {/* =================================================
+            Navigation links
+            ================================================= */}
 
-          {/* ---------- Always visible ---------- */}
+        <nav
+          className={
+            menuOpen
+              ? "navbar-links open"
+              : "navbar-links"
+          }
+        >
 
-          <NavLink to="/" end className={linkClass} onClick={closeMenu}>
+
+          {/* =================================================
+              Always visible
+              ================================================= */}
+
+          <NavLink
+            to="/"
+            end
+            className={linkClass}
+            onClick={closeMenu}
+          >
+
             <FaHome />
             Home
+
           </NavLink>
 
-          <NavLink to="/courses" className={linkClass} onClick={closeMenu}>
+
+          <NavLink
+            to="/courses"
+            className={linkClass}
+            onClick={closeMenu}
+          >
+
             <FaBook />
             Courses
+
           </NavLink>
 
 
+          {/* =================================================
+              Student menu
+              ================================================= */}
 
-          {/* ---------- Student menu ---------- */}
+          {loggedIn &&
+            user?.role === "student" && (
 
-          {loggedIn && user?.role === "student" && (
-            <>
-              <NavLink to="/student" className={linkClass} onClick={closeMenu}>
-                <FaUserGraduate />
-                Student Area
-              </NavLink>
+              <>
 
-              <NavLink
-                to="/my-enrollments"
-                className={linkClass}
-                onClick={closeMenu}
-              >
-                <FaBook />
-                My Enrollments
-              </NavLink>
-            </>
-          )}
+                <NavLink
+                  to="/student"
+                  className={linkClass}
+                  onClick={closeMenu}
+                >
 
+                  <FaUserGraduate />
+                  Student Area
 
-          {/* ---------- Admin menu ---------- */}
-
-          {loggedIn && user?.role === "admin" && (
-            <>
-              <NavLink to="/admin" end className={linkClass} onClick={closeMenu}>
-                <FaTachometerAlt />
-                Dashboard
-              </NavLink>
-
-              <NavLink
-                to="/admin/courses"
-                className={linkClass}
-                onClick={closeMenu}
-              >
-                <FaChartBar />
-                Manage Courses
-              </NavLink>
-
-              <NavLink
-                to="/admin/enrollments"
-                className={linkClass}
-                onClick={closeMenu}
-              >
-                <FaUsers />
-                Manage Enrollments
-              </NavLink>
-            </>
-          )}
+                </NavLink>
 
 
-          {/* ---------- Logged in: user name + logout ---------- */}
+                <NavLink
+                  to="/my-enrollments"
+                  className={linkClass}
+                  onClick={closeMenu}
+                >
+
+                  <FaBook />
+                  My Enrollments
+
+                </NavLink>
+
+              </>
+
+            )}
+
+
+          {/* =================================================
+              Admin menu
+              ================================================= */}
+
+          {loggedIn &&
+            user?.role === "admin" && (
+
+              <>
+
+                <NavLink
+                  to="/admin"
+                  end
+                  className={linkClass}
+                  onClick={closeMenu}
+                >
+
+                  <FaTachometerAlt />
+                  Dashboard
+
+                </NavLink>
+
+
+                <NavLink
+                  to="/admin/courses"
+                  className={linkClass}
+                  onClick={closeMenu}
+                >
+
+                  <FaChartBar />
+                  Manage Courses
+
+                </NavLink>
+
+
+                <NavLink
+                  to="/admin/enrollments"
+                  className={linkClass}
+                  onClick={closeMenu}
+                >
+
+                  <FaUsers />
+                  Manage Enrollments
+
+                </NavLink>
+
+              </>
+
+            )}
+
+
+          {/* =================================================
+              Logged-in user
+              ================================================= */}
 
           {loggedIn ? (
 
             <div className="navbar-user">
 
               <span className="navbar-username">
+
                 <FaUser />
-                <span className="role-badge">{user?.role}</span>
-                {user?.full_name || user?.username}
+
+                <span className="role-badge">
+                  {user?.role}
+                </span>
+
+                {user?.full_name ||
+                  user?.username}
+
               </span>
+
 
               <button
                 type="button"
                 className="btn btn-outline"
                 onClick={handleLogout}
               >
+
                 <FaSignOutAlt />
                 Logout
+
               </button>
 
             </div>
 
           ) : (
 
-            /* ---------- Logged out: login button ---------- */
-            
+            /* =================================================
+               Logged-out user: Login button
+               ================================================= */
+
             <Link
               to="/login"
-              state={{ from: location.pathname }}
+              state={{ from: currentPage }}
               className="btn btn-primary"
               onClick={closeMenu}
             >
+
               <FaSignInAlt />
               Login
+
             </Link>
 
           )}
@@ -186,8 +324,10 @@ function Navbar() {
       </div>
 
     </header>
+
   );
+
 }
 
-export default Navbar;
 
+export default Navbar;

@@ -1886,3 +1886,41 @@ textarea.input {
 
 }
 
+/* =========================================
+   CR-005 Session Expiry & Access Denied
+   ========================================= */
+
+/* Access Denied page */
+.access-denied-container {
+  width: 92%;
+  max-width: 600px;
+
+  margin: 80px auto;
+
+  padding: 35px;
+
+  text-align: center;
+
+  background-color: var(--color-white);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+
+  box-shadow: var(--shadow-lg);
+}
+
+.access-denied-container h2 {
+  color: var(--color-danger);
+
+  margin-bottom: 12px;
+
+  font-size: 1.6rem;
+}
+
+.access-denied-container p {
+  margin: 0;
+
+  color: var(--color-muted);
+
+  font-size: 0.95rem;
+}

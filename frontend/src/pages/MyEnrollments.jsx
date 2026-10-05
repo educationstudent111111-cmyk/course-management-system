@@ -30,6 +30,8 @@ function MyEnrollments() {
 
         const response = await api.get("/enrollments/my");
 
+        //console.log("FULL API RESPONSE:", response.data);
+
         setEnrollments(response.data.enrollments || []);
 
       } catch (error) {

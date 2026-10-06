@@ -77,7 +77,6 @@ function CourseDetails() {
         const response =
           await api.get(`/courses/${id}`);
 
-
         setCourse(
           response.data.course
         );
@@ -111,7 +110,6 @@ function CourseDetails() {
 
     const checkEnrollment = async () => {
 
-      // Only students need enrollment status
       if (!studentLoggedIn) {
 
         setIsEnrolled(false);
@@ -124,24 +122,18 @@ function CourseDetails() {
 
         setCheckingEnrollment(true);
 
-
         const response =
           await api.get("/enrollments/my");
-
 
         const enrollments =
           response.data.enrollments || [];
 
-
-        // Compare current course ID
-        // with student's enrolled course IDs
         const enrolled =
           enrollments.some(
             (enrollment) =>
               String(enrollment.course_id) ===
               String(id)
           );
-
 
         setIsEnrolled(enrolled);
 
@@ -152,7 +144,6 @@ function CourseDetails() {
           error
         );
 
-        // Do not block the course page
         setIsEnrolled(false);
 
       } finally {
@@ -166,6 +157,54 @@ function CourseDetails() {
     checkEnrollment();
 
   }, [id, studentLoggedIn]);
+
+
+  // ======================================================
+  // CR-007
+  // COURSE AVAILABILITY
+  // ======================================================
+
+  const isUnlimited =
+    course &&
+    (course.max_students === null ||
+      course.max_students === undefined);
+
+  const isFull =
+    course &&
+    !isUnlimited &&
+    course.is_full === true;
+
+  const availabilityText =
+    isUnlimited
+      ? "Unlimited"
+      : `${course.enrolled_count} / ${course.max_students} students`;
+
+
+  // ======================================================
+  // CR-007
+  // REFRESH COURSE AVAILABILITY
+  // ======================================================
+
+  const refreshCourse = async () => {
+
+    try {
+
+      const response =
+        await api.get(`/courses/${id}`);
+
+      setCourse(
+        response.data.course
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Error refreshing course:",
+        error
+      );
+
+    }
+  };
 
 
   // ======================================================
@@ -191,27 +230,40 @@ function CourseDetails() {
           }
         );
 
-
       setSuccess(
         response.data.message ||
         "Course enrollment successful"
       );
 
-
-      // CR-006
-      // Course is now enrolled
       setIsEnrolled(true);
+
+      await refreshCourse();
 
     } catch (error) {
 
-      // Already enrolled
       if (error.response?.status === 409) {
 
-        setIsEnrolled(true);
+        const message =
+          error.response?.data?.message ||
+          "This course is full. No more students can enroll.";
 
-        setError(
-          "You are already enrolled in this course. You can see it in My Enrollments."
-        );
+        if (
+          message
+            .toLowerCase()
+            .includes("already enrolled")
+        ) {
+
+          setIsEnrolled(true);
+
+        } else {
+
+          setIsEnrolled(false);
+
+        }
+
+        setError(message);
+
+        await refreshCourse();
 
       } else {
 
@@ -271,7 +323,6 @@ function CourseDetails() {
             {error}
           </p>
 
-
           <div className="center-actions">
 
             <Link
@@ -301,7 +352,6 @@ function CourseDetails() {
 
     <>
       <Navbar />
-
 
       <div className="container">
 
@@ -431,7 +481,53 @@ function CourseDetails() {
 
               </div>
 
+
+              {/* CR-007 */}
+
+              <div>
+
+                <dt>
+                  Availability
+                </dt>
+
+                <dd
+                  className={
+                    isFull
+                      ? "details-availability full"
+                      : "details-availability"
+                  }
+                >
+
+                  {isFull
+                    ? "Course Full"
+                    : availabilityText}
+
+                </dd>
+
+              </div>
+
             </dl>
+
+
+            {/* CR-007 FULL COURSE MESSAGE */}
+
+            {isFull && !isEnrolled && (
+
+              <div className="notice">
+
+                <p>
+                  <FaTimesCircle />
+
+                  {" "}
+
+                  This course is currently full.
+                  No more students can enroll at
+                  this time.
+                </p>
+
+              </div>
+
+            )}
 
 
             {/* ==================================================
@@ -476,7 +572,6 @@ function CourseDetails() {
                     enroll in this course.
                   </p>
 
-
                   <Link
                     to="/login"
                     state={{
@@ -504,8 +599,6 @@ function CourseDetails() {
 
                 <>
 
-                  {/* Checking enrollment */}
-
                   {checkingEnrollment && (
 
                     <p className="loading">
@@ -515,9 +608,7 @@ function CourseDetails() {
                   )}
 
 
-                  {/* ==================================================
-                      ALREADY ENROLLED
-                  ================================================== */}
+                  {/* ALREADY ENROLLED */}
 
                   {!checkingEnrollment &&
                     isEnrolled && (
@@ -528,7 +619,6 @@ function CourseDetails() {
                           You are already enrolled
                           in this course.
                         </p>
-
 
                         <Link
                           to="/my-enrollments"
@@ -546,12 +636,37 @@ function CourseDetails() {
                     )}
 
 
-                  {/* ==================================================
-                      NOT ENROLLED
-                  ================================================== */}
+                  {/* COURSE FULL */}
 
                   {!checkingEnrollment &&
-                    !isEnrolled && (
+                    !isEnrolled &&
+                    isFull && (
+
+                      <div className="notice">
+
+                        <p>
+                          Course Full. Please check
+                          again later if a seat becomes
+                          available.
+                        </p>
+
+                        <Link
+                          to="/courses"
+                          className="btn btn-outline"
+                        >
+                          Back to Courses
+                        </Link>
+
+                      </div>
+
+                    )}
+
+
+                  {/* AVAILABLE COURSE */}
+
+                  {!checkingEnrollment &&
+                    !isEnrolled &&
+                    !isFull && (
 
                       <>
 
@@ -604,7 +719,6 @@ function CourseDetails() {
                     administrator. Only students
                     can enroll in courses.
                   </p>
-
 
                   <Link
                     to="/admin/courses"

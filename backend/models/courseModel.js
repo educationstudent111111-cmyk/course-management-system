@@ -1,134 +1,269 @@
-const db = require("../config/db");
-
-const Course = {
-
-  // Get all courses
-  async getAll() {
-    const [rows] = await db.execute(
-      "SELECT * FROM courses"
-    );
-
-    return rows;
-  },
+const ALLOWED_LEVELS = [
+  "Beginner",
+  "Intermediate",
+  "Advanced",
+];
 
 
-  // Get one course
-  async getById(id) {
-    const [rows] = await db.execute(
-      "SELECT * FROM courses WHERE id = ?",
-      [id]
-    );
+const validateCourse = (req, res, next) => {
 
-    return rows[0];
-  },
-
-
-  // Create course
-  async create(course) {
-
-    const {
-      title,
-      category,
-      level,
-      duration,
-      price,
-      image,
-      description,
-    } = course;
-
-    const [result] = await db.execute(
-      `INSERT INTO courses
-       (title, category, level, duration, price, image, description)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        title,
-        category,
-        level,
-        duration,
-        price,
-        image,
-        description,
-      ]
-    );
-
-    return result.insertId;
-  },
+  const {
+    title,
+    category,
+    level,
+    duration,
+    price,
+    max_students,
+  } = req.body || {};
 
 
-  // Find course by title
-async findByTitle(title, excludeId = null) {
-  let sql = `
-    SELECT id, title
-    FROM courses
-    WHERE LOWER(TRIM(title)) = LOWER(TRIM(?))
-  `;
+  const errors = {};
 
-  const params = [title];
 
-  // During update, exclude the current course
-  if (excludeId !== null) {
-    sql += " AND id <> ?";
-    params.push(excludeId);
+  // =====================================================
+  // TITLE
+  // =====================================================
+
+  if (!title || !String(title).trim()) {
+
+    errors.title =
+      "Title is required.";
+
   }
 
-  sql += " LIMIT 1";
 
-  const [rows] = await db.execute(sql, params);
+  // =====================================================
+  // CATEGORY
+  // =====================================================
 
-  return rows[0];
-},
+  if (!category || !String(category).trim()) {
 
+    errors.category =
+      "Category is required.";
 
-  // Update course
-  async update(id, course) {
-
-    const {
-      title,
-      category,
-      level,
-      duration,
-      price,
-      image,
-      description,
-    } = course;
-
-    const [result] = await db.execute(
-      `UPDATE courses
-       SET title = ?,
-           category = ?,
-           level = ?,
-           duration = ?,
-           price = ?,
-           image = ?,
-           description = ?
-       WHERE id = ?`,
-      [
-        title,
-        category,
-        level,
-        duration,
-        price,
-        image,
-        description,
-        id,
-      ]
-    );
-
-    return result;
-  },
+  }
 
 
-  // Delete course
-  async delete(id) {
+  // =====================================================
+  // LEVEL
+  // =====================================================
 
-    const [result] = await db.execute(
-      "DELETE FROM courses WHERE id = ?",
-      [id]
-    );
+  if (!level || !String(level).trim()) {
 
-    return result;
-  },
+    errors.level =
+      "Level is required.";
 
+  } else if (
+    !ALLOWED_LEVELS.includes(
+      String(level).trim()
+    )
+  ) {
+
+    errors.level =
+      "Level must be Beginner, Intermediate, or Advanced.";
+
+  }
+
+
+  // =====================================================
+  // DURATION
+  // =====================================================
+
+  if (
+    !duration ||
+    !String(duration).trim()
+  ) {
+
+    errors.duration =
+      "Duration is required (for example: 8 Weeks).";
+
+  }
+
+
+  // =====================================================
+  // PRICE
+  // =====================================================
+
+  if (
+    price === "" ||
+    price === null ||
+    price === undefined
+  ) {
+
+    errors.price =
+      "Price is required.";
+
+  } else {
+
+    const numericPrice =
+      Number(price);
+
+
+    if (
+      !Number.isFinite(
+        numericPrice
+      )
+    ) {
+
+      errors.price =
+        "Please enter a valid price.";
+
+    } else if (
+      numericPrice < 0
+    ) {
+
+      errors.price =
+        "Price must be greater than or equal to 0.";
+
+    }
+
+  }
+
+
+  // =====================================================
+  // MAXIMUM STUDENTS
+  // CR-007
+  //
+  // Blank / null = Unlimited
+  // Must be a positive integer when provided.
+  // =====================================================
+
+  let normalizedMaxStudents = null;
+
+
+  // Blank value = Unlimited
+  if (
+    max_students === "" ||
+    max_students === null ||
+    max_students === undefined
+  ) {
+
+    normalizedMaxStudents = null;
+
+  } else {
+
+    const maxStudentsString =
+      String(max_students).trim();
+
+
+    // -----------------------------------------------
+    // Check positive integer
+    //
+    // Accept:
+    // 1
+    // 5
+    // 30
+    //
+    // Reject:
+    // 0
+    // -1
+    // 2.5
+    // abc
+    // 10.5
+    // -----------------------------------------------
+
+    if (
+      !/^[1-9]\d*$/.test(
+        maxStudentsString
+      )
+    ) {
+
+      errors.max_students =
+        "Maximum students must be a positive integer.";
+
+    } else {
+
+      const numericMaxStudents =
+        Number(maxStudentsString);
+
+
+      // Safety check for very large values
+      if (
+        !Number.isSafeInteger(
+          numericMaxStudents
+        ) ||
+        numericMaxStudents <= 0
+      ) {
+
+        errors.max_students =
+          "Maximum students must be a positive integer.";
+
+      } else {
+
+        normalizedMaxStudents =
+          numericMaxStudents;
+
+      }
+
+    }
+
+  }
+
+
+  // =====================================================
+  // STOP REQUEST IF VALIDATION FAILED
+  // =====================================================
+
+  if (
+    Object.keys(errors).length > 0
+  ) {
+
+    return res.status(400).json({
+
+      message:
+        "Please correct the highlighted fields.",
+
+      errors,
+
+    });
+
+  }
+
+
+  // =====================================================
+  // CLEAN / NORMALIZED DATA
+  // =====================================================
+
+  req.validatedCourse = {
+
+    title:
+      String(title).trim(),
+
+    category:
+      String(category).trim(),
+
+    level:
+      String(level).trim(),
+
+    duration:
+      String(duration).trim(),
+
+    price:
+      Number(price),
+
+    image:
+      req.body.image
+        ? String(req.body.image).trim()
+        : "",
+
+    description:
+      req.body.description
+        ? String(req.body.description).trim()
+        : "",
+
+    // CR-007
+    // null = Unlimited
+    max_students:
+      normalizedMaxStudents,
+
+  };
+
+
+  next();
 };
 
-module.exports = Course;
+
+module.exports = {
+  validateCourse,
+  ALLOWED_LEVELS,
+};

@@ -3,7 +3,10 @@ CREATE DATABASE IF NOT EXISTS course_management;
 USE course_management;
 
 
--- Users table
+-- =====================================================
+-- USERS TABLE
+-- =====================================================
+
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
 
@@ -17,7 +20,10 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 
--- Courses table
+-- =====================================================
+-- COURSES TABLE
+-- =====================================================
+
 CREATE TABLE IF NOT EXISTS courses (
     id INT AUTO_INCREMENT PRIMARY KEY,
 
@@ -33,11 +39,25 @@ CREATE TABLE IF NOT EXISTS courses (
 
     image VARCHAR(500),
 
-    description TEXT
+    description TEXT,
+
+    -- CR-007
+    -- NULL = Unlimited
+    max_students INT NULL,
+
+    -- Maximum students must be positive when provided
+    CONSTRAINT chk_courses_max_students
+        CHECK (
+            max_students IS NULL
+            OR max_students > 0
+        )
 );
 
 
--- Enrollments table
+-- =====================================================
+-- ENROLLMENTS TABLE
+-- =====================================================
+
 CREATE TABLE IF NOT EXISTS enrollments (
     id INT AUTO_INCREMENT PRIMARY KEY,
 

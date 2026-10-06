@@ -1,7 +1,23 @@
 import { Link } from "react-router-dom";
-import { FaEye } from "react-icons/fa";
+import { FaEye, FaTimesCircle } from "react-icons/fa";
 
 function CourseCard({ course }) {
+
+  const isUnlimited =
+    course.max_students === null ||
+    course.max_students === undefined;
+
+  const isFull =
+    !isUnlimited &&
+    course.is_full === true;
+
+  const availabilityText =
+    isFull
+      ? "Course Full"
+      : isUnlimited
+        ? "Unlimited"
+        : `${course.enrolled_count} / ${course.max_students} students`;
+
 
   return (
 
@@ -19,6 +35,7 @@ function CourseCard({ course }) {
       <div className="course-card-body">
 
         <div className="course-card-tags">
+
           <span className="tag tag-category">
             {course.category}
           </span>
@@ -26,6 +43,7 @@ function CourseCard({ course }) {
           <span className="tag tag-level">
             {course.level}
           </span>
+
         </div>
 
 
@@ -34,21 +52,52 @@ function CourseCard({ course }) {
         </h3>
 
 
-        {/* Short summary - we trim the long description */}
+        {/* Short summary */}
         <p className="course-card-summary">
+
           {course.description?.slice(0, 110)}
-          {course.description?.length > 110 ? "..." : ""}
+
+          {course.description?.length > 110
+            ? "..."
+            : ""}
+
         </p>
 
 
         <ul className="course-card-meta">
+
           <li>
-            <strong>Duration:</strong> {course.duration}
+            <strong>Duration:</strong>{" "}
+            {course.duration}
           </li>
 
           <li>
-            <strong>Price:</strong> Rs. {course.price}
+            <strong>Price:</strong>{" "}
+            Rs. {course.price}
           </li>
+
+          {/* CR-007 Availability */}
+
+          <li
+            className={
+              isFull
+                ? "course-availability full"
+                : "course-availability"
+            }
+          >
+
+            <strong>Availability:</strong>{" "}
+
+            {isFull && (
+              <FaTimesCircle />
+            )}
+
+            {" "}
+
+            {availabilityText}
+
+          </li>
+
         </ul>
 
 
@@ -56,13 +105,17 @@ function CourseCard({ course }) {
           to={`/courses/${course.id}`}
           className="btn btn-primary btn-block"
         >
+
           <FaEye />
+
           View Details
+
         </Link>
 
       </div>
 
     </article>
+
   );
 }
 

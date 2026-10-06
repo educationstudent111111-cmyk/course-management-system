@@ -2035,3 +2035,152 @@ textarea.input {
 
   font-weight: 500;
 }
+
+/* =========================================
+   CR-007 Course Seat Capacity & Availability
+   ========================================= */
+
+/* Course availability text */
+.course-availability {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  font-weight: 600;
+  color: var(--color-success-text);
+}
+
+.course-availability.full {
+  color: var(--color-danger);
+  font-weight: bold;
+}
+
+
+/* Course card availability */
+.course-card-meta .course-availability {
+  margin-top: 5px;
+}
+
+.course-card-meta .course-availability svg {
+  flex-shrink: 0;
+}
+
+
+/* Course details availability */
+.details-list .course-availability {
+  font-size: 1rem;
+}
+
+.details-list .course-availability.full {
+  color: var(--color-danger);
+}
+
+
+/* Full course notice */
+.course-full-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  width: 100%;
+
+  margin-bottom: 14px;
+  padding: 12px 16px;
+
+  background-color: var(--color-error-bg);
+  color: var(--color-error-text);
+
+  border-left: 4px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+
+  font-weight: 600;
+}
+
+.course-full-notice svg {
+  flex-shrink: 0;
+}
+
+
+/* Admin course availability */
+.course-availability-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 5px 10px;
+
+  border-radius: 999px;
+
+  background-color: var(--color-success-bg);
+  color: var(--color-success-text);
+
+  font-size: 0.8rem;
+  font-weight: bold;
+
+  white-space: nowrap;
+}
+
+.course-availability-badge.full {
+  background-color: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.course-availability-badge.unlimited {
+  background-color: #f1f5f9;
+  color: var(--color-muted);
+}
+
+
+/* Maximum students input helper text */
+.capacity-help {
+  margin: 4px 0 0;
+
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+
+/* Capacity value inside admin table */
+.capacity-value {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+
+/* Full course table row */
+.course-row-full {
+  background-color: #fff7f7;
+}
+
+.course-row-full:hover {
+  background-color: #fef2f2 !important;
+}
+
+
+/* CR-007 availability responsive styles */
+@media (max-width: 900px) {
+
+  .course-availability-badge {
+    font-size: 0.75rem;
+  }
+
+}
+
+
+@media (max-width: 600px) {
+
+  .course-full-notice {
+    font-size: 0.9rem;
+    padding: 10px 12px;
+  }
+
+  .course-availability {
+    font-size: 0.9rem;
+  }
+
+  .course-availability-badge {
+    font-size: 0.72rem;
+    padding: 4px 8px;
+  }
+
+}

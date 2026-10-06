@@ -22,6 +22,7 @@ const EMPTY_COURSE = {
   level: "Beginner",
   duration: "",
   price: "",
+  max_students: "",
   image: "",
   description: "",
 };
@@ -69,16 +70,12 @@ function ManageCourses() {
   // CR-003 SEARCH / FILTER / SORT STATE
   // =========================================================
 
-  // Search text
   const [searchText, setSearchText] = useState("");
 
-  // Category filter
   const [selectedCategory, setSelectedCategory] = useState("All");
 
-  // Level filter
   const [selectedLevel, setSelectedLevel] = useState("All");
 
-  // Sorting
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState("asc");
 
@@ -283,6 +280,30 @@ function ManageCourses() {
       }
 
 
+      // Maximum Students
+      else if (sortColumn === "max_students") {
+
+        valueA =
+          a.max_students === null ||
+          a.max_students === undefined
+            ? Number.MAX_SAFE_INTEGER
+            : Number(a.max_students);
+
+        valueB =
+          b.max_students === null ||
+          b.max_students === undefined
+            ? Number.MAX_SAFE_INTEGER
+            : Number(b.max_students);
+
+        const numericResult =
+          valueA - valueB;
+
+        return sortDirection === "asc"
+          ? numericResult
+          : -numericResult;
+      }
+
+
       // ---------- TEXT SORTING ----------
       if (typeof valueA === "string") {
 
@@ -313,7 +334,6 @@ function ManageCourses() {
 
     if (sortColumn === column) {
 
-      // Same column → reverse direction
       setSortDirection(
         sortDirection === "asc"
           ? "desc"
@@ -322,9 +342,9 @@ function ManageCourses() {
 
     } else {
 
-      // New column → start with ascending
       setSortColumn(column);
       setSortDirection("asc");
+
     }
   };
 
@@ -364,6 +384,36 @@ function ManageCourses() {
 
 
   // =========================================================
+  // CR-007 - AVAILABILITY DISPLAY
+  // =========================================================
+
+  const getAvailabilityText = (course) => {
+
+    const enrolledCount =
+      Number(course.enrolled_count || 0);
+
+    if (
+      course.max_students === null ||
+      course.max_students === undefined
+    ) {
+      return "Unlimited";
+    }
+
+    const maxStudents =
+      Number(course.max_students);
+
+    if (
+      course.is_full ||
+      enrolledCount >= maxStudents
+    ) {
+      return "Course Full";
+    }
+
+    return `${enrolledCount} / ${maxStudents} students`;
+  };
+
+
+  // =========================================================
   // FORM HELPERS
   // =========================================================
 
@@ -376,7 +426,6 @@ function ManageCourses() {
       [name]: value,
     });
 
-    // Remove the server error for the field
     setFieldErrors((previous) => ({
       ...previous,
       [name]: "",
@@ -426,6 +475,11 @@ function ManageCourses() {
       level: course.level || "Beginner",
       duration: course.duration || "",
       price: String(course.price ?? ""),
+      max_students:
+        course.max_students === null ||
+        course.max_students === undefined
+          ? ""
+          : String(course.max_students),
       image: course.image || "",
       description: course.description || "",
     });
@@ -477,7 +531,7 @@ function ManageCourses() {
     setFieldErrors({});
 
 
-    // ---------- CLIENT-SIDE VALIDATION ----------
+    // ---------- BASIC VALIDATION ----------
 
     if (
       !formData.title.trim() ||
@@ -516,6 +570,27 @@ function ManageCourses() {
     }
 
 
+    // ---------- CR-007 MAXIMUM STUDENTS VALIDATION ----------
+
+    if (formData.max_students !== "") {
+
+      const maxStudents =
+        Number(formData.max_students);
+
+      if (
+        !Number.isInteger(maxStudents) ||
+        maxStudents <= 0
+      ) {
+
+        setFormError(
+          "Maximum Students must be a positive whole number."
+        );
+
+        return;
+      }
+    }
+
+
     // ---------- COURSE PAYLOAD ----------
 
     const coursePayload = {
@@ -529,6 +604,11 @@ function ManageCourses() {
       duration: formData.duration.trim(),
 
       price: Number(formData.price),
+
+      max_students:
+        formData.max_students === ""
+          ? null
+          : Number(formData.max_students),
 
       image: formData.image.trim(),
 
@@ -569,9 +649,7 @@ function ManageCourses() {
       }
 
 
-      // IMPORTANT:
-      // Search, filters and sorting states
-      // are NOT reset here.
+      // Preserve CR-003 search/filter/sort state
 
       closeForm();
 
@@ -633,10 +711,6 @@ function ManageCourses() {
       setSuccess(
         response.data.message
       );
-
-      // IMPORTANT:
-      // Search, filters and sorting states
-      // are preserved.
 
       await refreshCourses();
 
@@ -945,6 +1019,52 @@ function ManageCourses() {
 
                     <p className="field-error">
                       {fieldErrors.price}
+                    </p>
+
+                  )}
+
+                </div>
+
+              </div>
+
+
+              {/* ---------- CR-007 MAXIMUM STUDENTS ---------- */}
+
+              <div className="form-row">
+
+                <div className="form-group">
+
+                  <label htmlFor="max_students">
+                    Maximum Students
+                  </label>
+
+
+                  <input
+                    id="max_students"
+                    className={
+                      fieldErrors.max_students
+                        ? "input input-error"
+                        : "input"
+                    }
+                    type="number"
+                    min="1"
+                    step="1"
+                    name="max_students"
+                    value={formData.max_students}
+                    onChange={handleChange}
+                    placeholder="e.g. 30"
+                  />
+
+
+                  <small>
+                    Leave blank for unlimited enrollment.
+                  </small>
+
+
+                  {fieldErrors.max_students && (
+
+                    <p className="field-error">
+                      {fieldErrors.max_students}
                     </p>
 
                   )}
@@ -1483,6 +1603,26 @@ function ManageCourses() {
                       </th>
 
 
+                      {/* CR-007 AVAILABILITY */}
+
+                      <th>
+
+                        <button
+                          type="button"
+                          className="sort-button"
+                          onClick={() =>
+                            handleSort("max_students")
+                          }
+                        >
+
+                          Availability
+                          {getSortIndicator("max_students")}
+
+                        </button>
+
+                      </th>
+
+
                       {/* ACTIONS */}
 
                       <th className="table-actions-column">
@@ -1561,6 +1701,23 @@ function ManageCourses() {
 
                           <td>
                             Rs. {course.price}
+                          </td>
+
+
+                          {/* CR-007 AVAILABILITY */}
+
+                          <td>
+
+                            <span
+                              className={
+                                course.is_full
+                                  ? "tag tag-danger"
+                                  : "tag"
+                              }
+                            >
+                              {getAvailabilityText(course)}
+                            </span>
+
                           </td>
 
 

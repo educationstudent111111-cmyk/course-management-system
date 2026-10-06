@@ -37,17 +37,22 @@ function Home() {
 
       try {
 
-        // Both requests are independent, so we fire them together.
-        const [coursesResponse, statsResponse] = await Promise.all([
-          api.get("/courses"),
-          api.get("/courses/stats"),
-        ]);
+        const [coursesResponse, statsResponse] =
+          await Promise.all([
+            api.get("/courses"),
+            api.get("/courses/stats"),
+          ]);
 
-        setCourses(coursesResponse.data.courses);
+        setCourses(
+          coursesResponse.data.courses || []
+        );
 
         setStats({
-          courseCount: statsResponse.data.courseCount,
-          studentCount: statsResponse.data.studentCount,
+          courseCount:
+            statsResponse.data.courseCount || 0,
+
+          studentCount:
+            statsResponse.data.studentCount || 0,
         });
 
       } catch (error) {
@@ -69,13 +74,17 @@ function Home() {
   }, []);
 
 
-
-
-  // Show only the first 3 courses as a preview on the landing page.
+  // Show only the first 3 courses
   const previewCourses = courses.slice(0, 3);
 
-  // Count the DIFFERENT levels we actually got from the backend.
-  const levelCount = new Set(courses.map((course) => course.level)).size;
+
+  // Count different levels
+  const levelCount =
+    new Set(
+      courses
+        .map((course) => course.level)
+        .filter(Boolean)
+    ).size;
 
 
   return (
@@ -83,7 +92,10 @@ function Home() {
     <>
       <Navbar />
 
-      {/* Hero section */}
+
+      {/* =====================================================
+          HERO SECTION
+      ===================================================== */}
 
       <section className="hero">
 
@@ -96,8 +108,13 @@ function Home() {
             </p>
 
             <h1 className="hero-title">
+
               Grow your career with our
-              <span className="hero-highlight"> practical IT courses</span>
+
+              <span className="hero-highlight">
+                {" "}practical IT courses
+              </span>
+
             </h1>
 
             <p className="hero-subtitle">
@@ -106,16 +123,30 @@ function Home() {
               catalogue from one place.
             </p>
 
+
             <div className="hero-actions">
 
-              <Link to="/courses" className="btn btn-primary btn-lg">
+              <Link
+                to="/courses"
+                className="btn btn-primary btn-lg"
+              >
+
                 <FaSearch />
+
                 Browse Courses
+
               </Link>
 
-              <Link to="/login" className="btn btn-outline-dark btn-lg">
+
+              <Link
+                to="/login"
+                className="btn btn-outline-dark btn-lg"
+              >
+
                 <FaSignInAlt />
+
                 Login
+
               </Link>
 
             </div>
@@ -124,11 +155,13 @@ function Home() {
 
 
           <div className="hero-image-wrapper">
+
             <img
               src={heroImage}
               alt="Students learning web development"
               className="hero-image"
             />
+
           </div>
 
         </div>
@@ -136,7 +169,9 @@ function Home() {
       </section>
 
 
-      {/* Statistics (GET /api/courses/stats) */}
+      {/* =====================================================
+          STATISTICS
+      ===================================================== */}
 
       <section className="stats-strip">
 
@@ -145,7 +180,9 @@ function Home() {
           <div className="stat-card">
 
             <span className="stat-value">
-              {loading ? "..." : stats.courseCount}
+              {loading
+                ? "..."
+                : stats.courseCount}
             </span>
 
             <span className="stat-label">
@@ -158,7 +195,9 @@ function Home() {
           <div className="stat-card">
 
             <span className="stat-value">
-              {loading ? "..." : stats.studentCount}
+              {loading
+                ? "..."
+                : stats.studentCount}
             </span>
 
             <span className="stat-label">
@@ -171,7 +210,9 @@ function Home() {
           <div className="stat-card">
 
             <span className="stat-value">
-              {loading ? "..." : levelCount}
+              {loading
+                ? "..."
+                : levelCount}
             </span>
 
             <span className="stat-label">
@@ -183,7 +224,9 @@ function Home() {
 
           <div className="stat-card">
 
-            <span className="stat-value">24/7</span>
+            <span className="stat-value">
+              24/7
+            </span>
 
             <span className="stat-label">
               Online Access
@@ -196,7 +239,9 @@ function Home() {
       </section>
 
 
-      {/* Short introduction */}
+      {/* =====================================================
+          INTRODUCTION
+      ===================================================== */}
 
       <section className="section">
 
@@ -215,42 +260,74 @@ function Home() {
           <div className="feature-grid">
 
             <div className="feature-card">
-              <span className="feature-icon"><FaBook /></span>
-              <h3>Industry Ready Courses</h3>
+
+              <span className="feature-icon">
+                <FaBook />
+              </span>
+
+              <h3>
+                Industry Ready Courses
+              </h3>
+
               <p>
                 Courses cover frontend, backend, databases and full stack
                 development with real project work.
               </p>
+
             </div>
 
 
             <div className="feature-card">
-              <span className="feature-icon"><FaBolt /></span>
-              <h3>Enroll in One Click</h3>
+
+              <span className="feature-icon">
+                <FaBolt />
+              </span>
+
+              <h3>
+                Enroll in One Click
+              </h3>
+
               <p>
                 Logged in students can enroll in any course instantly
                 without any paperwork.
               </p>
+
             </div>
 
 
             <div className="feature-card">
-              <span className="feature-icon"><FaChartLine /></span>
-              <h3>Track Your Progress</h3>
+
+              <span className="feature-icon">
+                <FaChartLine />
+              </span>
+
+              <h3>
+                Track Your Progress
+              </h3>
+
               <p>
                 See every course you have enrolled in and when you
                 enrolled, all from your student area.
               </p>
+
             </div>
 
 
             <div className="feature-card">
-              <span className="feature-icon"><FaTools /></span>
-              <h3>Full Admin Control</h3>
+
+              <span className="feature-icon">
+                <FaTools />
+              </span>
+
+              <h3>
+                Full Admin Control
+              </h3>
+
               <p>
                 Administrators can add, edit and remove courses and
                 manage every student enrollment.
               </p>
+
             </div>
 
           </div>
@@ -260,7 +337,9 @@ function Home() {
       </section>
 
 
-      {/* Course preview (GET /api/courses) */}
+      {/* =====================================================
+          COURSE PREVIEW
+      ===================================================== */}
 
       <section className="section section-alt">
 
@@ -276,38 +355,64 @@ function Home() {
 
 
           {loading && (
-            <p className="loading">Loading courses...</p>
-          )}
-
-
-          {error && !loading && (
-            <p className="error">{error}</p>
-          )}
-
-
-          {!loading && !error && previewCourses.length === 0 && (
-            <p className="empty">
-              No courses have been published yet. Please check back soon.
+            <p className="loading">
+              Loading courses...
             </p>
           )}
 
 
-          {!loading && !error && previewCourses.length > 0 && (
-
-            <div className="course-grid">
-              {previewCourses.map((course) => (
-                <CourseCard key={course.id} course={course} />
-              ))}
-            </div>
-
+          {error && !loading && (
+            <p className="error">
+              {error}
+            </p>
           )}
 
 
+          {!loading &&
+            !error &&
+            previewCourses.length === 0 && (
+
+              <p className="empty">
+                No courses have been published yet.
+                Please check back soon.
+              </p>
+
+            )}
+
+
+          {!loading &&
+            !error &&
+            previewCourses.length > 0 && (
+
+              <div className="course-grid">
+
+                {previewCourses.map((course) => (
+
+                  <CourseCard
+                    key={course.id}
+                    course={course}
+                  />
+
+                ))}
+
+              </div>
+
+            )}
+
+
           <div className="center-actions">
-            <Link to="/courses" className="btn btn-outline">
+
+            <Link
+              to="/courses"
+              className="btn btn-outline"
+            >
+
               <FaEye />
+
               View All Courses
+
             </Link>
+
           </div>
 
         </div>
@@ -315,30 +420,47 @@ function Home() {
       </section>
 
 
-
-      {/* Call to action */}
+      {/* =====================================================
+          CALL TO ACTION
+      ===================================================== */}
 
       <section className="cta">
 
         <div className="container cta-inner">
 
-          <h2>Ready to start learning?</h2>
+          <h2>
+            Ready to start learning?
+          </h2>
 
           <p>
             Create your student account access by logging in and enroll
             in your first course today.
           </p>
 
+
           <div className="hero-actions">
 
-            <Link to="/courses" className="btn btn-light btn-lg">
+            <Link
+              to="/courses"
+              className="btn btn-light btn-lg"
+            >
+
               <FaSearch />
+
               Explore Courses
+
             </Link>
 
-            <Link to="/login" className="btn btn-outline-light btn-lg">
+
+            <Link
+              to="/login"
+              className="btn btn-outline-light btn-lg"
+            >
+
               <FaSignInAlt />
+
               Login Now
+
             </Link>
 
           </div>
@@ -351,8 +473,9 @@ function Home() {
       <Footer />
 
     </>
+
   );
 }
 
-export default Home;
 
+export default Home;

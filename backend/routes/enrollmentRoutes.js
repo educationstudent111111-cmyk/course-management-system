@@ -8,13 +8,16 @@ const {
   getCourseEnrollments,
   getAllEnrollments,
   deleteEnrollment,
+  deleteMyEnrollment,
 } = require("../controllers/enrollmentController");
 
 const authMiddleware = require("../middleware/authMiddleware");
+
 const roleMiddleware = require("../middleware/roleMiddleware");
 
 
 // Student (JWT + student role required)
+
 // Enroll in a course
 router.post(
   "/",
@@ -25,6 +28,7 @@ router.post(
 
 
 // Student (JWT + student role required)
+
 // View my enrolled courses
 router.get(
   "/my",
@@ -34,7 +38,20 @@ router.get(
 );
 
 
+// Student (JWT + student role required)
+
+// Cancel my own enrollment
+// CR-006: Student Self-Service Enrollment Cancellation
+router.delete(
+  "/my/:id",
+  authMiddleware,
+  roleMiddleware(["student"]),
+  deleteMyEnrollment
+);
+
+
 // Admin (JWT + admin role required)
+
 // View all enrollments
 router.get(
   "/",
@@ -45,6 +62,7 @@ router.get(
 
 
 // Admin (JWT + admin role required)
+
 // View students enrolled in a course
 router.get(
   "/course/:courseId",
@@ -55,6 +73,7 @@ router.get(
 
 
 // Admin (JWT + admin role required)
+
 // Delete an enrollment
 router.delete(
   "/:id",

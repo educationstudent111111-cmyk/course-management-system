@@ -2,8 +2,12 @@ const db = require("../config/db");
 
 const Enrollment = {
 
-  // Create enrollment
+  // ======================================================
+  // CREATE ENROLLMENT
+  // ======================================================
+
   async create(studentId, courseId) {
+
     const [result] = await db.execute(
       `INSERT INTO enrollments
        (student_id, course_id)
@@ -15,8 +19,12 @@ const Enrollment = {
   },
 
 
-  // Check if student is already enrolled
+  // ======================================================
+  // CHECK EXISTING ENROLLMENT
+  // ======================================================
+
   async findByStudentAndCourse(studentId, courseId) {
+
     const [rows] = await db.execute(
       `SELECT *
        FROM enrollments
@@ -29,8 +37,12 @@ const Enrollment = {
   },
 
 
-  // Get all courses enrolled by a student
+  // ======================================================
+  // GET MY ENROLLMENTS
+  // ======================================================
+
   async getByStudent(studentId) {
+
     const [rows] = await db.execute(
       `SELECT
           e.id,
@@ -55,8 +67,12 @@ const Enrollment = {
   },
 
 
-  // Get all students enrolled in a course
+  // ======================================================
+  // GET COURSE ENROLLMENTS - ADMIN
+  // ======================================================
+
   async getByCourse(courseId) {
+
     const [rows] = await db.execute(
       `SELECT
           e.id,
@@ -76,8 +92,12 @@ const Enrollment = {
   },
 
 
-  // Get all enrollments
+  // ======================================================
+  // GET ALL ENROLLMENTS - ADMIN
+  // ======================================================
+
   async getAll() {
+
     const [rows] = await db.execute(
       `SELECT
           e.id,
@@ -107,8 +127,12 @@ const Enrollment = {
   },
 
 
-  // Delete enrollment
+  // ======================================================
+  // DELETE ENROLLMENT - ADMIN
+  // ======================================================
+
   async delete(id) {
+
     const [result] = await db.execute(
       `DELETE FROM enrollments
        WHERE id = ?`,
@@ -118,6 +142,28 @@ const Enrollment = {
     return result;
   },
 
+
+  // ======================================================
+  // CR-006
+  // DELETE STUDENT'S OWN ENROLLMENT
+  // ======================================================
+
+  async deleteMyEnrollment(enrollmentId, studentId) {
+
+    const [result] = await db.execute(
+      `DELETE FROM enrollments
+       WHERE id = ?
+       AND student_id = ?`,
+      [
+        enrollmentId,
+        studentId
+      ]
+    );
+
+    return result;
+  },
+
 };
+
 
 module.exports = Enrollment;

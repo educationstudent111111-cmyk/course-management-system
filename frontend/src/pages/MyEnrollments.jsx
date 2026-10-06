@@ -13,177 +13,277 @@ function MyEnrollments() {
   const [enrollments, setEnrollments] = useState([]);
 
   const [loading, setLoading] = useState(true);
+
   const [error, setError] = useState("");
 
-  // Default sorting option
+  // CR-006
+  const [cancellingId, setCancellingId] = useState(null);
+
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const [cancelError, setCancelError] = useState("");
+
   const [sortOption, setSortOption] = useState("newest");
 
   const user = getUser();
 
 
-  // ---------- Load the logged-in student's enrollments ----------
+  // ======================================================
+  // LOAD ENROLLMENTS
+  // ======================================================
+
+  const loadEnrollments = async () => {
+
+    try {
+
+      setError("");
+
+      const response =
+        await api.get("/enrollments/my");
+
+      setEnrollments(
+        response.data.enrollments || []
+      );
+
+    } catch (error) {
+
+      setError(
+        error.response?.data?.message ||
+        "Failed to load your enrollments"
+      );
+
+    } finally {
+
+      setLoading(false);
+
+    }
+  };
+
+
   useEffect(() => {
 
-    const getEnrollments = async () => {
-
-      try {
-
-        const response = await api.get("/enrollments/my");
-
-        //console.log("FULL API RESPONSE:", response.data);
-
-        setEnrollments(response.data.enrollments || []);
-
-      } catch (error) {
-
-        setError(
-          error.response?.data?.message ||
-          "Failed to load your enrollments"
-        );
-
-      } finally {
-
-        setLoading(false);
-
-      }
-    };
-
-    getEnrollments();
+    loadEnrollments();
 
   }, []);
 
 
-  // ---------- Safely convert price to number ----------
+  // ======================================================
+  // CR-006
+  // CANCEL ENROLLMENT
+  // ======================================================
+
+  const handleCancelEnrollment = async (enrollmentId) => {
+
+    // Confirmation
+    const confirmed = window.confirm(
+      "Are you sure you want to cancel this enrollment?"
+    );
+
+
+    if (!confirmed) {
+      return;
+    }
+
+
+    try {
+
+      setCancellingId(enrollmentId);
+
+      setSuccessMessage("");
+
+      setCancelError("");
+
+
+      // Student-only backend endpoint
+      await api.delete(
+        `/enrollments/my/${enrollmentId}`
+      );
+
+
+      // Success message
+      setSuccessMessage(
+        "Enrollment cancelled successfully."
+      );
+
+
+      // Refresh list without page reload
+      await loadEnrollments();
+
+} catch (error) {
+
+  console.error("Cancel enrollment error:", error);
+
+  console.log("Status:", error.response?.status);
+  console.log("Response:", error.response?.data);
+
+  setCancelError(
+    error.response?.data?.message ||
+    error.message ||
+    "Failed to cancel enrollment."
+  );
+
+
+    } finally {
+
+      setCancellingId(null);
+
+    }
+  };
+
+
+  // ======================================================
+  // SAFE PRICE
+  // ======================================================
+
   const getSafePrice = (price) => {
 
     const numericPrice = Number(price);
 
-    return Number.isFinite(numericPrice) ? numericPrice : 0;
-
+    return Number.isFinite(numericPrice)
+      ? numericPrice
+      : 0;
   };
 
 
-  // ---------- Total enrolled courses ----------
-  const totalCourses = enrollments.length;
+  // ======================================================
+  // SUMMARY
+  // ======================================================
+
+  const totalCourses =
+    enrollments.length;
 
 
-  // ---------- Total course value ----------
-  const totalValue = enrollments.reduce(
-    (total, enrollment) => {
-      return total + getSafePrice(enrollment.price);
-    },
-    0
-  );
+  const totalValue =
+    enrollments.reduce(
+      (total, enrollment) => {
+
+        return total +
+          getSafePrice(enrollment.price);
+
+      },
+      0
+    );
 
 
-  // ---------- Average course price ----------
   const averagePrice =
     totalCourses > 0
       ? totalValue / totalCourses
       : 0;
 
 
-  // ---------- Distinct category count ----------
-  const distinctCategories = new Set(
-    enrollments
-      .map((enrollment) => enrollment.category)
-      .filter((category) => category)
-  ).size;
+  const distinctCategories =
+    new Set(
+      enrollments
+        .map(
+          (enrollment) =>
+            enrollment.category
+        )
+        .filter(Boolean)
+    ).size;
 
 
-  // ---------- Format date ----------
+  // ======================================================
+  // FORMAT DATE
+  // ======================================================
+
   const formatDate = (value) => {
 
-    if (!value) return "-";
+    if (!value) {
+      return "-";
+    }
+
 
     const date = new Date(value);
+
 
     if (Number.isNaN(date.getTime())) {
       return "-";
     }
 
-    return date.toLocaleDateString();
 
+    return date.toLocaleDateString();
   };
 
 
-  // ---------- Format price ----------
+  // ======================================================
+  // FORMAT PRICE
+  // ======================================================
+
   const formatPrice = (value) => {
 
     const numericValue = Number(value);
+
 
     if (!Number.isFinite(numericValue)) {
       return "0.00";
     }
 
-    return numericValue.toFixed(2);
 
+    return numericValue.toFixed(2);
   };
 
 
-  // ---------- Sort enrollments ----------
-  const sortedEnrollments = [...enrollments].sort((a, b) => {
+  // ======================================================
+  // SORT
+  // ======================================================
 
-    // Newest enrolled
-    if (sortOption === "newest") {
+  const sortedEnrollments =
+    [...enrollments].sort((a, b) => {
 
-      return (
-        new Date(b.enrolled_at || 0) -
-        new Date(a.enrolled_at || 0)
-      );
+      if (sortOption === "newest") {
 
-    }
-
-
-    // Oldest enrolled
-    if (sortOption === "oldest") {
-
-      return (
-        new Date(a.enrolled_at || 0) -
-        new Date(b.enrolled_at || 0)
-      );
-
-    }
-
-
-    // Price: High to Low
-    if (sortOption === "price-high") {
-
-      return (
-        getSafePrice(b.price) -
-        getSafePrice(a.price)
-      );
-
-    }
-
-
-    // Price: Low to High
-    if (sortOption === "price-low") {
-
-      return (
-        getSafePrice(a.price) -
-        getSafePrice(b.price)
-      );
-
-    }
-
-
-    // Course Title: A to Z
-    if (sortOption === "title-az") {
-
-      return String(a.title || "")
-        .toLowerCase()
-        .localeCompare(
-          String(b.title || "").toLowerCase()
+        return (
+          new Date(b.enrolled_at || 0) -
+          new Date(a.enrolled_at || 0)
         );
+      }
 
-    }
+
+      if (sortOption === "oldest") {
+
+        return (
+          new Date(a.enrolled_at || 0) -
+          new Date(b.enrolled_at || 0)
+        );
+      }
 
 
-    return 0;
+      if (sortOption === "price-high") {
 
-  });
+        return (
+          getSafePrice(b.price) -
+          getSafePrice(a.price)
+        );
+      }
 
+
+      if (sortOption === "price-low") {
+
+        return (
+          getSafePrice(a.price) -
+          getSafePrice(b.price)
+        );
+      }
+
+
+      if (sortOption === "title-az") {
+
+        return String(a.title || "")
+          .toLowerCase()
+          .localeCompare(
+            String(b.title || "")
+              .toLowerCase()
+          );
+      }
+
+
+      return 0;
+    });
+
+
+  // ======================================================
+  // UI
+  // ======================================================
 
   return (
 
@@ -192,7 +292,7 @@ function MyEnrollments() {
 
       <div className="container">
 
-        {/* ---------- Page Header ---------- */}
+        {/* Header */}
 
         <div className="page-header">
 
@@ -222,241 +322,316 @@ function MyEnrollments() {
         </div>
 
 
-        {/* ---------- Loading ---------- */}
+        {/* Loading */}
 
         {loading && (
+
           <p className="loading">
             Loading your enrollments...
           </p>
+
         )}
 
 
-        {/* ---------- Error ---------- */}
+        {/* Main error */}
 
         {error && !loading && (
+
           <p className="error">
             {error}
           </p>
+
         )}
 
 
-        {/* ---------- Enrollment Summary ---------- */}
+        {/* CR-006 Success */}
 
-        {!loading && !error && enrollments.length > 0 && (
+        {successMessage && !loading && (
 
-          <div className="enrollment-summary">
-
-            <div className="summary-card">
-
-              <h3>Total Enrolled Courses</h3>
-
-              <p>
-                {totalCourses}
-              </p>
-
-            </div>
-
-
-            <div className="summary-card">
-
-              <h3>Total Course Value</h3>
-
-              <p>
-                Rs. {formatPrice(totalValue)}
-              </p>
-
-            </div>
-
-
-            <div className="summary-card">
-
-              <h3>Average Course Price</h3>
-
-              <p>
-                Rs. {formatPrice(averagePrice)}
-              </p>
-
-            </div>
-
-
-            <div className="summary-card">
-
-              <h3>Distinct Categories</h3>
-
-              <p>
-                {distinctCategories}
-              </p>
-
-            </div>
-
+          <div className="success-message">
+            {successMessage}
           </div>
 
         )}
 
 
-        {/* ---------- Sorting ---------- */}
+        {/* CR-006 Error */}
 
-        {!loading && !error && enrollments.length > 0 && (
+        {cancelError && !loading && (
 
-          <div className="enrollment-controls">
-
-            <label htmlFor="sort-enrollments">
-              Sort By:
-            </label>
-
-            <select
-              id="sort-enrollments"
-              value={sortOption}
-              onChange={(event) =>
-                setSortOption(event.target.value)
-              }
-            >
-
-              <option value="newest">
-                Newest Enrolled
-              </option>
-
-              <option value="oldest">
-                Oldest Enrolled
-              </option>
-
-              <option value="price-high">
-                Price: High to Low
-              </option>
-
-              <option value="price-low">
-                Price: Low to High
-              </option>
-
-              <option value="title-az">
-                Course Title: A to Z
-              </option>
-
-            </select>
-
+          <div className="error-message">
+            {cancelError}
           </div>
 
         )}
 
 
-        {/* ---------- Empty State ---------- */}
+        {/* Summary */}
 
-        {!loading && !error && enrollments.length === 0 && (
+        {!loading &&
+          !error &&
+          enrollments.length > 0 && (
 
-          <div className="empty-box">
+            <div className="enrollment-summary">
 
-            <p className="empty">
-              You are not enrolled in any courses yet.
-            </p>
+              <div className="summary-card">
 
-            <Link
-              to="/courses"
-              className="btn btn-primary"
-            >
-              <FaSearch />
-              Find a Course
-            </Link>
+                <h3>Total Enrolled Courses</h3>
 
-          </div>
+                <p>
+                  {totalCourses}
+                </p>
 
-        )}
+              </div>
 
 
-        {/* ---------- Enrollment Cards ---------- */}
+              <div className="summary-card">
 
-        {!loading && !error && enrollments.length > 0 && (
+                <h3>Total Course Value</h3>
 
-          <div className="course-grid">
+                <p>
+                  Rs. {formatPrice(totalValue)}
+                </p>
 
-            {sortedEnrollments.map((enrollment) => (
+              </div>
 
-              <article
-                className="course-card"
-                key={enrollment.id}
+
+              <div className="summary-card">
+
+                <h3>Average Course Price</h3>
+
+                <p>
+                  Rs. {formatPrice(averagePrice)}
+                </p>
+
+              </div>
+
+
+              <div className="summary-card">
+
+                <h3>Distinct Categories</h3>
+
+                <p>
+                  {distinctCategories}
+                </p>
+
+              </div>
+
+            </div>
+
+          )}
+
+
+        {/* Sorting */}
+
+        {!loading &&
+          !error &&
+          enrollments.length > 0 && (
+
+            <div className="enrollment-controls">
+
+              <label htmlFor="sort-enrollments">
+                Sort By:
+              </label>
+
+
+              <select
+                id="sort-enrollments"
+                value={sortOption}
+                onChange={(event) =>
+                  setSortOption(
+                    event.target.value
+                  )
+                }
               >
 
-                <img
-                  src={enrollment.image}
-                  alt={enrollment.title}
-                  className="course-card-image"
-                  loading="lazy"
-                />
+                <option value="newest">
+                  Newest Enrolled
+                </option>
+
+                <option value="oldest">
+                  Oldest Enrolled
+                </option>
+
+                <option value="price-high">
+                  Price: High to Low
+                </option>
+
+                <option value="price-low">
+                  Price: Low to High
+                </option>
+
+                <option value="title-az">
+                  Course Title: A to Z
+                </option>
+
+              </select>
+
+            </div>
+
+          )}
 
 
-                <div className="course-card-body">
+        {/* Empty */}
 
-                  <div className="course-card-tags">
+        {!loading &&
+          !error &&
+          enrollments.length === 0 && (
 
-                    <span className="tag tag-category">
-                      {enrollment.category}
-                    </span>
+            <div className="empty-box">
 
-                    <span className="tag tag-level">
-                      {enrollment.level}
-                    </span>
-
-                  </div>
+              <p className="empty">
+                You are not enrolled in any courses yet.
+              </p>
 
 
-                  <h3 className="course-card-title">
-                    {enrollment.title}
-                  </h3>
+              <Link
+                to="/courses"
+                className="btn btn-primary"
+              >
+                <FaSearch />
+                Find a Course
+              </Link>
+
+            </div>
+
+          )}
 
 
-                  <p className="course-card-summary">
+        {/* Enrollment Cards */}
 
-                    {enrollment.description?.slice(0, 100)}
+        {!loading &&
+          !error &&
+          enrollments.length > 0 && (
 
-                    {enrollment.description?.length > 100
-                      ? "..."
-                      : ""}
+            <div className="course-grid">
 
-                  </p>
+              {sortedEnrollments.map(
+                (enrollment) => (
 
-
-                  <ul className="course-card-meta">
-
-                    <li>
-                      <strong>Duration:</strong>{" "}
-                      {enrollment.duration}
-                    </li>
-
-
-                    <li>
-                      <strong>Price:</strong>{" "}
-                      Rs. {formatPrice(enrollment.price)}
-                    </li>
-
-
-                    <li>
-
-                      <strong>Enrolled on:</strong>{" "}
-
-                      {formatDate(
-                        enrollment.enrolled_at
-                      )}
-
-                    </li>
-
-                  </ul>
-
-
-                  <Link
-                    to={`/courses/${enrollment.course_id}`}
-                    className="btn btn-outline btn-block"
+                  <article
+                    className="course-card"
+                    key={enrollment.id}
                   >
-                    View Course
-                  </Link>
 
-                </div>
+                    <img
+                      src={enrollment.image}
+                      alt={enrollment.title}
+                      className="course-card-image"
+                      loading="lazy"
+                    />
 
-              </article>
 
-            ))}
+                    <div className="course-card-body">
 
-          </div>
+                      <div className="course-card-tags">
 
-        )}
+                        <span className="tag tag-category">
+                          {enrollment.category}
+                        </span>
+
+                        <span className="tag tag-level">
+                          {enrollment.level}
+                        </span>
+
+                      </div>
+
+
+                      <h3 className="course-card-title">
+                        {enrollment.title}
+                      </h3>
+
+
+                      <p className="course-card-summary">
+
+                        {enrollment.description?.slice(
+                          0,
+                          100
+                        )}
+
+                        {enrollment.description?.length > 100
+                          ? "..."
+                          : ""}
+
+                      </p>
+
+
+                      <ul className="course-card-meta">
+
+                        <li>
+                          <strong>
+                            Duration:
+                          </strong>{" "}
+                          {enrollment.duration}
+                        </li>
+
+
+                        <li>
+                          <strong>
+                            Price:
+                          </strong>{" "}
+                          Rs.{" "}
+                          {formatPrice(
+                            enrollment.price
+                          )}
+                        </li>
+
+
+                        <li>
+                          <strong>
+                            Enrolled on:
+                          </strong>{" "}
+                          {formatDate(
+                            enrollment.enrolled_at
+                          )}
+                        </li>
+
+                      </ul>
+
+
+                      {/* View Course */}
+
+                      <Link
+                        to={`/courses/${enrollment.course_id}`}
+                        className="btn btn-outline btn-block"
+                      >
+                        View Course
+                      </Link>
+
+
+                      {/* CR-006 Cancel */}
+
+                      <button
+                        type="button"
+                        className="cancel-enrollment-btn"
+                        onClick={() =>
+                          handleCancelEnrollment(
+                            enrollment.id
+                          )
+                        }
+                        disabled={
+                          cancellingId ===
+                          enrollment.id
+                        }
+                      >
+
+                        {cancellingId ===
+                        enrollment.id
+                          ? "Cancelling..."
+                          : "Cancel Enrollment"}
+
+                      </button>
+
+                    </div>
+
+                  </article>
+
+                )
+              )}
+
+            </div>
+
+          )}
 
       </div>
 

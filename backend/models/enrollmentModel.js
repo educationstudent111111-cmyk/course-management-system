@@ -1,4 +1,12 @@
 const db = require("../config/db");
+// CR-008: Escape SQL LIKE wildcard characters.
+// "!" is used as the LIKE escape character.
+function escapeLikeValue(value) {
+  return value
+    .replace(/!/g, "!!")
+    .replace(/%/g, "!%")
+    .replace(/_/g, "!_");
+}
 
 const Enrollment = {
 
@@ -297,35 +305,147 @@ const Enrollment = {
   // GET ALL ENROLLMENTS - ADMIN
   // ======================================================
 
-  async getAll() {
+  // async getAll() {
+
+  //   const [rows] = await db.execute(
+  //     `SELECT
+  //         e.id,
+  //         e.enrolled_at,
+
+  //         u.id AS student_id,
+  //         u.username,
+  //         u.full_name,
+
+  //         c.id AS course_id,
+  //         c.title,
+  //         c.category,
+  //         c.level
+
+  //      FROM enrollments e
+
+  //      JOIN users u
+  //        ON e.student_id = u.id
+
+  //      JOIN courses c
+  //        ON e.course_id = c.id
+
+  //      ORDER BY e.enrolled_at DESC`
+  //   );
+
+
+  //   return rows;
+  // },
+
+
+  // ======================================================
+  // GET ALL ENROLLMENTS - ADMIN
+  // CR-008: Search, Filter, Sort and Pagination
+  // ======================================================
+
+  async getAll(filters = {}) {
+    const {
+      q = "",
+      courseId = "",
+      from = "",
+      to = "",
+      sort = "enrolled_at",
+      order = "desc",
+      page = 1,
+      limit = 20,
+    } = filters;
+
+    const conditions = [];
+    const params = [];
+
+    // Search student name and username.
+    if (q.trim() !== "") {
+      const searchValue = `%${escapeLikeValue(q.trim())}%`;
+
+      conditions.push(`
+        (
+          u.full_name LIKE ? ESCAPE '!'
+          OR u.username LIKE ? ESCAPE '!'
+        )
+      `);
+
+      params.push(searchValue, searchValue);
+    }
+
+    // Filter by course.
+    if (courseId !== "") {
+      conditions.push("e.course_id = ?");
+      params.push(Number(courseId));
+    }
+
+    // Inclusive enrollment date filters.
+    if (from !== "") {
+      conditions.push("e.enrolled_at >= ?");
+      params.push(`${from} 00:00:00`);
+    }
+
+    if (to !== "") {
+      conditions.push("e.enrolled_at < DATE_ADD(?, INTERVAL 1 DAY)");
+      params.push(to);
+    }
+
+    const whereSQL =
+      conditions.length > 0
+        ? `WHERE ${conditions.join(" AND ")}`
+        : "";
+
+    // Only these predefined columns can be used for sorting.
+    const sortColumns = {
+      enrolled_at: "e.enrolled_at",
+      student: "u.full_name",
+      course: "c.title",
+    };
+
+    const sortColumn =
+      sortColumns[sort] || sortColumns.enrolled_at;
+
+    const sortDirection =
+      order === "asc" ? "ASC" : "DESC";
+
+    const offset = (Number(page) - 1) * Number(limit);
+
+    const fromSQL = `
+      FROM enrollments e
+      JOIN users u ON e.student_id = u.id
+      JOIN courses c ON e.course_id = c.id
+      ${whereSQL}
+    `;
+
+    // Count must use the same filters as the data query.
+    const [countRows] = await db.execute(
+      `SELECT COUNT(*) AS total ${fromSQL}`,
+      params
+    );
+
+    const total = Number(countRows[0]?.total || 0);
 
     const [rows] = await db.execute(
-      `SELECT
+      `
+        SELECT
           e.id,
           e.enrolled_at,
-
           u.id AS student_id,
           u.username,
           u.full_name,
-
           c.id AS course_id,
           c.title,
           c.category,
           c.level
-
-       FROM enrollments e
-
-       JOIN users u
-         ON e.student_id = u.id
-
-       JOIN courses c
-         ON e.course_id = c.id
-
-       ORDER BY e.enrolled_at DESC`
+        ${fromSQL}
+        ORDER BY ${sortColumn} ${sortDirection}, e.id ${sortDirection}
+        LIMIT ? OFFSET ?
+      `,
+      [...params, Number(limit), offset]
     );
 
-
-    return rows;
+    return {
+      enrollments: rows,
+      total,
+    };
   },
 
 

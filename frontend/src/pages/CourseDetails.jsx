@@ -175,9 +175,11 @@ function CourseDetails() {
     course.is_full === true;
 
   const availabilityText =
-    isUnlimited
-      ? "Unlimited"
-      : `${course.enrolled_count} / ${course.max_students} students`;
+    !course
+      ? ""
+      : isUnlimited
+        ? "Unlimited"
+        : `${course.enrolled_count} / ${course.max_students} students`;
 
 
   // ======================================================

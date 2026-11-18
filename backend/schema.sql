@@ -71,7 +71,17 @@ CREATE TABLE IF NOT EXISTS enrollments (
 
     enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-    -- A student cannot enroll in the same course twice
+    status ENUM('pending', 'approved', 'rejected')
+        NOT NULL DEFAULT 'pending',
+
+    reviewed_by INT NULL,
+
+    reviewed_at TIMESTAMP NULL,
+
+    decision_note TEXT NULL,
+
+    -- One enrollment request per student/course. A rejected request may be
+    -- resubmitted by returning the existing row to pending.
     UNIQUE (student_id, course_id),
 
     -- Student account
@@ -86,8 +96,14 @@ CREATE TABLE IF NOT EXISTS enrollments (
         ON DELETE CASCADE
         ON UPDATE CASCADE,
 
+    FOREIGN KEY (reviewed_by)
+        REFERENCES users(id)
+        ON DELETE SET NULL
+        ON UPDATE CASCADE,
+
     -- CR-008: Indexes for course/date filtering and sorting
     INDEX idx_enrollments_course_id (course_id),
     INDEX idx_enrollments_enrolled_at (enrolled_at),
-    INDEX idx_enrollments_course_date (course_id, enrolled_at)
+    INDEX idx_enrollments_course_date (course_id, enrolled_at),
+    INDEX idx_enrollments_status_course (status, course_id)
 );

@@ -76,7 +76,13 @@ function StudentDashboard() {
             <span className="dashboard-card-value">
               {reportValue(report?.enrolledCourses)}
             </span>
-            <span className="dashboard-card-label">My Enrolled Courses</span>
+            <span className="dashboard-card-label">Approved Courses</span>
+          </div>
+          <div className="dashboard-card">
+            <span className="dashboard-card-value">
+              {reportValue(report?.pendingRequests)}
+            </span>
+            <span className="dashboard-card-label">Pending Requests</span>
           </div>
           <div className="dashboard-card">
             <span className="dashboard-card-value">
@@ -134,7 +140,9 @@ function StudentDashboard() {
                     <th>Course</th>
                     <th>Category</th>
                     <th>Level</th>
-                    <th>Enrolled On</th>
+                    <th>Status</th>
+                    <th>Requested On</th>
+                    <th>Decision</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -147,7 +155,19 @@ function StudentDashboard() {
                       </td>
                       <td>{enrollment.category}</td>
                       <td>{enrollment.level}</td>
+                      <td>
+                        <span className={`tag enrollment-status ${enrollment.status}`}>
+                          {enrollment.status}
+                        </span>
+                        {enrollment.status === "rejected" &&
+                          enrollment.decisionNote && (
+                            <div className="decision-note">
+                              {enrollment.decisionNote}
+                            </div>
+                          )}
+                      </td>
                       <td>{formatDate(enrollment.enrolledAt)}</td>
+                      <td>{formatDate(enrollment.reviewedAt)}</td>
                     </tr>
                   ))}
                 </tbody>

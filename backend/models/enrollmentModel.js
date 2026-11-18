@@ -11,169 +11,211 @@ function escapeLikeValue(value) {
 const Enrollment = {
 
   // ======================================================
-  // CREATE ENROLLMENT WITH CAPACITY PROTECTION
-  // CR-007
+  // Create or resubmit an enrollment request. Rejected requests reuse their
+  // existing unique student/course row; pending and approved rows cannot repeat.
   // ======================================================
 
   async create(studentId, courseId) {
-
-    // Get a dedicated database connection
     const connection = await db.getConnection();
 
     try {
-
-      // Start transaction
       await connection.beginTransaction();
 
-
-      // --------------------------------------------------
-      // LOCK COURSE ROW
-      //
-      // FOR UPDATE prevents two students from checking
-      // the same last seat at the same time.
-      // --------------------------------------------------
-
       const [courseRows] = await connection.execute(
-        `SELECT
-            id,
-            title,
-            max_students
+        `SELECT id
          FROM courses
          WHERE id = ?
          FOR UPDATE`,
         [courseId]
       );
 
-
-      // Course not found
       if (courseRows.length === 0) {
-
-        const error = new Error(
-          "Course not found"
-        );
-
+        const error = new Error("Course not found");
         error.code = "COURSE_NOT_FOUND";
-
         throw error;
       }
-
-
-      const course = courseRows[0];
-
-
-      // --------------------------------------------------
-      // CHECK EXISTING ENROLLMENT
-      // --------------------------------------------------
 
       const [existingRows] = await connection.execute(
-        `SELECT id
+        `SELECT id, status
          FROM enrollments
          WHERE student_id = ?
-         AND course_id = ?
-         LIMIT 1`,
-        [
-          studentId,
-          courseId
-        ]
+           AND course_id = ?
+         FOR UPDATE`,
+        [studentId, courseId]
       );
 
-
-      if (existingRows.length > 0) {
-
+      const existing = existingRows[0];
+      if (existing && existing.status !== "rejected") {
         const error = new Error(
-          "You are already enrolled in this course"
+          existing.status === "pending"
+            ? "An enrollment request is already pending."
+            : "You are already enrolled in this course."
         );
-
         error.code = "ALREADY_ENROLLED";
-
         throw error;
       }
 
+      let enrollmentId;
+      let resubmitted = false;
 
-      // --------------------------------------------------
-      // COUNT CURRENT ENROLLMENTS
-      //
-      // Your current system does not have a status column.
-      // Therefore every existing enrollment row counts.
-      // --------------------------------------------------
-
-      const [countRows] = await connection.execute(
-        `SELECT COUNT(*) AS enrolled_count
-         FROM enrollments
-         WHERE course_id = ?`,
-        [courseId]
-      );
-
-
-      const enrolledCount =
-        Number(countRows[0]?.enrolled_count || 0);
-
-
-      // --------------------------------------------------
-      // CHECK CAPACITY
-      //
-      // NULL = Unlimited
-      // --------------------------------------------------
-
-      if (
-        course.max_students !== null &&
-        enrolledCount >= Number(course.max_students)
-      ) {
-
-        const error = new Error(
-          "Course is full. No seats are available."
+      if (existing) {
+        await connection.execute(
+          `UPDATE enrollments
+           SET status = 'pending',
+               enrolled_at = CURRENT_TIMESTAMP,
+               reviewed_by = NULL,
+               reviewed_at = NULL,
+               decision_note = NULL
+           WHERE id = ? AND status = 'rejected'`,
+          [existing.id]
         );
-
-        error.code = "COURSE_FULL";
-
-        error.enrolledCount = enrolledCount;
-        error.maxStudents = Number(
-          course.max_students
+        enrollmentId = existing.id;
+        resubmitted = true;
+      } else {
+        const [result] = await connection.execute(
+          `INSERT INTO enrollments (student_id, course_id, status)
+           VALUES (?, ?, 'pending')`,
+          [studentId, courseId]
         );
-
-        throw error;
+        enrollmentId = result.insertId;
       }
-
-
-      // --------------------------------------------------
-      // CREATE ENROLLMENT
-      // --------------------------------------------------
-
-      const [result] = await connection.execute(
-        `INSERT INTO enrollments
-         (student_id, course_id)
-         VALUES (?, ?)`,
-        [
-          studentId,
-          courseId
-        ]
-      );
-
-
-      // --------------------------------------------------
-      // COMMIT TRANSACTION
-      // --------------------------------------------------
 
       await connection.commit();
 
-
-      return {
-        enrollmentId: result.insertId,
-        enrolledCount: enrolledCount + 1,
-        maxStudents: course.max_students
-      };
-
-
+      return { enrollmentId, status: "pending", resubmitted };
     } catch (error) {
-
-      // Rollback if anything failed
       await connection.rollback();
-
       throw error;
-
     } finally {
+      connection.release();
+    }
+  },
 
-      // Always release connection
+  async updateStatus(enrollmentId, status, reviewerId, decisionNote = null) {
+    const connection = await db.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      const [requestRows] = await connection.execute(
+        `SELECT id, course_id, status
+         FROM enrollments
+         WHERE id = ?
+         LIMIT 1`,
+        [enrollmentId]
+      );
+
+      const request = requestRows[0];
+      if (!request) {
+        const error = new Error("Enrollment request not found.");
+        error.code = "ENROLLMENT_NOT_FOUND";
+        throw error;
+      }
+
+      const [courseRows] = await connection.execute(
+        `SELECT id, max_students
+         FROM courses
+         WHERE id = ?
+         FOR UPDATE`,
+        [request.course_id]
+      );
+
+      if (courseRows.length === 0) {
+        const error = new Error("Course not found.");
+        error.code = "COURSE_NOT_FOUND";
+        throw error;
+      }
+
+      const [lockedRows] = await connection.execute(
+        `SELECT id, student_id, course_id, status
+         FROM enrollments
+         WHERE id = ?
+         FOR UPDATE`,
+        [enrollmentId]
+      );
+      const lockedRequest = lockedRows[0];
+
+      if (!lockedRequest) {
+        const error = new Error("Enrollment request not found.");
+        error.code = "ENROLLMENT_NOT_FOUND";
+        throw error;
+      }
+
+      if (lockedRequest.status !== "pending") {
+        const error = new Error(
+          "Only pending enrollment requests can be reviewed."
+        );
+        error.code = "INVALID_ENROLLMENT_STATUS";
+        throw error;
+      }
+
+      if (status === "approved") {
+        const [duplicateRows] = await connection.execute(
+          `SELECT id
+           FROM enrollments
+           WHERE student_id = ?
+             AND course_id = ?
+             AND status = 'approved'
+             AND id <> ?
+           LIMIT 1`,
+          [lockedRequest.student_id, lockedRequest.course_id, enrollmentId]
+        );
+
+        if (duplicateRows.length > 0) {
+          const error = new Error(
+            "The student already has an approved enrollment in this course."
+          );
+          error.code = "ALREADY_ENROLLED";
+          throw error;
+        }
+
+        const course = courseRows[0];
+        if (course.max_students !== null) {
+          const [countRows] = await connection.execute(
+            `SELECT COUNT(*) AS approved_count
+             FROM enrollments
+             WHERE course_id = ?
+               AND status = 'approved'`,
+            [lockedRequest.course_id]
+          );
+          const approvedCount = Number(countRows[0]?.approved_count || 0);
+
+          if (approvedCount >= Number(course.max_students)) {
+            const error = new Error(
+              "Course is full. The request cannot be approved."
+            );
+            error.code = "COURSE_FULL";
+            error.enrolledCount = approvedCount;
+            error.maxStudents = Number(course.max_students);
+            throw error;
+          }
+        }
+      }
+
+      const [result] = await connection.execute(
+        `UPDATE enrollments
+         SET status = ?,
+             reviewed_by = ?,
+             reviewed_at = CURRENT_TIMESTAMP,
+             decision_note = ?
+         WHERE id = ? AND status = 'pending'`,
+        [status, reviewerId, decisionNote, enrollmentId]
+      );
+
+      if (result.affectedRows !== 1) {
+        const error = new Error(
+          "Only pending enrollment requests can be reviewed."
+        );
+        error.code = "INVALID_ENROLLMENT_STATUS";
+        throw error;
+      }
+
+      await connection.commit();
+      return { enrollmentId, status };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
       connection.release();
     }
   },
@@ -210,8 +252,11 @@ const Enrollment = {
       `SELECT
           e.id,
           e.enrolled_at,
+         e.status,
+         e.reviewed_at,
+         e.decision_note,
 
-          c.id AS course_id,
+         c.id AS course_id,
           c.title,
           c.category,
           c.level,
@@ -226,6 +271,7 @@ const Enrollment = {
             SELECT COUNT(*)
             FROM enrollments e2
             WHERE e2.course_id = c.id
+              AND e2.status = 'approved'
           ) AS enrolled_count
 
        FROM enrollments e
@@ -280,6 +326,9 @@ const Enrollment = {
       `SELECT
           e.id,
           e.enrolled_at,
+          e.status,
+          e.reviewed_at,
+          e.decision_note,
 
           u.id AS student_id,
           u.username,
@@ -346,6 +395,7 @@ const Enrollment = {
     const {
       q = "",
       courseId = "",
+      status = "",
       from = "",
       to = "",
       sort = "enrolled_at",
@@ -375,6 +425,11 @@ const Enrollment = {
     if (courseId !== "") {
       conditions.push("e.course_id = ?");
       params.push(Number(courseId));
+    }
+
+    if (status !== "") {
+      conditions.push("e.status = ?");
+      params.push(status);
     }
 
     // Inclusive enrollment date filters.
@@ -412,6 +467,7 @@ const Enrollment = {
       FROM enrollments e
       JOIN users u ON e.student_id = u.id
       JOIN courses c ON e.course_id = c.id
+      LEFT JOIN users reviewer ON e.reviewed_by = reviewer.id
       ${whereSQL}
     `;
 
@@ -428,6 +484,10 @@ const Enrollment = {
         SELECT
           e.id,
           e.enrolled_at,
+          e.status,
+          e.reviewed_at,
+          e.decision_note,
+          reviewer.full_name AS reviewer_name,
           u.id AS student_id,
           u.username,
           u.full_name,
@@ -478,7 +538,8 @@ const Enrollment = {
     const [result] = await db.execute(
       `DELETE FROM enrollments
        WHERE id = ?
-       AND student_id = ?`,
+       AND student_id = ?
+       AND status = 'pending'`,
       [
         enrollmentId,
         studentId

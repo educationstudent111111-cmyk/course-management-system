@@ -47,6 +47,7 @@ All seeded users use the same password.
 | `/courses`            | public          | Courses            |
 | `/courses/:id`        | public          | Course details     |
 | `/login`              | public          | Login              |
+| `/profile`            | any signed-in user | Profile          |
 | `/student`            | student only    | Student dashboard  |
 | `/my-enrollments`     | student only    | My enrollments     |
 | `/admin`              | admin only      | Admin dashboard    |
@@ -108,11 +109,19 @@ src/
 | POST   | `/api/courses`                    | Manage courses (admin)             |
 | PUT    | `/api/courses/:id`                | Manage courses (admin)             |
 | DELETE | `/api/courses/:id`                | Manage courses (admin)             |
-| POST   | `/api/enrollments`                | Course details (student)           |
+| POST   | `/api/enrollments`                | Submit/resubmit request (student)  |
 | GET    | `/api/enrollments/my`             | Student dashboard, My enrollments  |
 | GET    | `/api/enrollments`                | Admin dashboard, Manage enrollments|
+| PATCH  | `/api/enrollments/:id/status`     | Approve/reject request (admin)     |
 | GET    | `/api/enrollments/course/:id`     | Manage enrollments (admin)         |
 | DELETE | `/api/enrollments/:id`            | Manage enrollments (admin)         |
+
+Enrollment requests begin as pending and do not reserve course capacity.
+Administrators can approve or reject pending requests. Approval rechecks
+approved enrollment capacity in a transaction. Students may cancel their own
+pending requests; approved enrollments must be removed by an administrator.
+Rejected requests may be resubmitted, which reopens the existing student/course
+request and clears its previous decision.
 
 ## 8. Build for production
 

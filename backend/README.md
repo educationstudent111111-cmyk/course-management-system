@@ -9,6 +9,7 @@ POST   /api/enrollments
 GET    /api/enrollments/my
 GET    /api/enrollments
 GET    /api/enrollments/course/:courseId
+PATCH  /api/enrollments/:id/status  (admin only; approve or reject)
 DELETE /api/enrollments/:id
 
 GET    /api/users/username/:username
@@ -29,6 +30,14 @@ Reporting endpoints:
 GET    /api/reports/overview  (admin only)
 GET    /api/reports/my        (student only; authenticated student's data only)
 
-Reports aggregate enrollment rows in SQL. The current enrollment schema has no
-status field, so all existing enrollments are included in totals and category
-breakdowns.
+Enrollment requests start as `pending`; only `approved` rows count toward
+course capacity and confirmed-enrollment reports. Admins may approve or reject
+pending requests, and a rejection requires a reason. Students may cancel only
+their pending requests. Rejected requests may be resubmitted, which reuses the
+existing student/course row and clears the previous decision.
+
+Reports count approved enrollments separately from pending requests. Existing
+databases should apply `migrations/003_enrollment_approval.sql` after selecting
+the `course_management` database. The migration adds the review fields,
+converts existing rows to `approved`, and sets `pending` as the default for new
+rows.

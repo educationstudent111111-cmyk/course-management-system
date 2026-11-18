@@ -4,6 +4,7 @@ const router = express.Router();
 
 const {
   enrollInCourse,
+  updateEnrollmentStatus,
   getMyEnrollments,
   getCourseEnrollments,
   getAllEnrollments,
@@ -58,6 +59,14 @@ router.get(
   authMiddleware,
   roleMiddleware(["admin"]),
   getAllEnrollments
+);
+
+// Admin-only decision endpoint; status handler uses the authenticated admin ID.
+router.patch(
+  "/:id/status",
+  authMiddleware,
+  roleMiddleware(["admin"]),
+  updateEnrollmentStatus
 );
 
 

@@ -35,9 +35,6 @@ function MyEnrollments() {
   const loadEnrollments = async () => {
 
     try {
-
-      setError("");
-
       const response =
         await api.get("/enrollments/my");
 
@@ -61,9 +58,34 @@ function MyEnrollments() {
 
 
   useEffect(() => {
+    let cancelled = false;
 
-    loadEnrollments();
+    const fetchEnrollments = async () => {
+      try {
+        const response = await api.get("/enrollments/my");
 
+        if (!cancelled) {
+          setEnrollments(response.data.enrollments || []);
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setError(
+            requestError.response?.data?.message ||
+            "Failed to load your enrollments"
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchEnrollments();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
 
@@ -149,12 +171,20 @@ function MyEnrollments() {
   // SUMMARY
   // ======================================================
 
-  const totalCourses =
-    enrollments.length;
+  const confirmedEnrollments = enrollments.filter(
+    (enrollment) => enrollment.status === "approved"
+  );
+  const totalCourses = confirmedEnrollments.length;
+  const pendingRequests = enrollments.filter(
+    (enrollment) => enrollment.status === "pending"
+  ).length;
+  const rejectedRequests = enrollments.filter(
+    (enrollment) => enrollment.status === "rejected"
+  ).length;
 
 
   const totalValue =
-    enrollments.reduce(
+    confirmedEnrollments.reduce(
       (total, enrollment) => {
 
         return total +
@@ -173,7 +203,7 @@ function MyEnrollments() {
 
   const distinctCategories =
     new Set(
-      enrollments
+      confirmedEnrollments
         .map(
           (enrollment) =>
             enrollment.category
@@ -384,6 +414,16 @@ function MyEnrollments() {
 
               </div>
 
+              <div className="summary-card">
+                <h3>Pending Requests</h3>
+                <p>{pendingRequests}</p>
+              </div>
+
+              <div className="summary-card">
+                <h3>Rejected Requests</h3>
+                <p>{rejectedRequests}</p>
+              </div>
+
 
               <div className="summary-card">
 
@@ -534,6 +574,10 @@ function MyEnrollments() {
                           {enrollment.level}
                         </span>
 
+                        <span className={`tag enrollment-status ${enrollment.status}`}>
+                          {enrollment.status}
+                        </span>
+
                       </div>
 
 
@@ -579,14 +623,29 @@ function MyEnrollments() {
 
                         <li>
                           <strong>
-                            Enrolled on:
+                            Requested on:
                           </strong>{" "}
                           {formatDate(
                             enrollment.enrolled_at
                           )}
                         </li>
 
+                        {enrollment.reviewed_at && (
+                          <li>
+                            <strong>Decision date:</strong>{" "}
+                            {formatDate(enrollment.reviewed_at)}
+                          </li>
+                        )}
+
                       </ul>
+
+                      {enrollment.status === "rejected" &&
+                        enrollment.decision_note && (
+                          <p className="notice">
+                            <strong>Rejection reason:</strong>{" "}
+                            {enrollment.decision_note}
+                          </p>
+                        )}
 
 
                       {/* View Course */}
@@ -601,7 +660,7 @@ function MyEnrollments() {
 
                       {/* CR-006 Cancel */}
 
-                      <button
+                      {enrollment.status === "pending" && <button
                         type="button"
                         className="cancel-enrollment-btn"
                         onClick={() =>
@@ -618,9 +677,9 @@ function MyEnrollments() {
                         {cancellingId ===
                         enrollment.id
                           ? "Cancelling..."
-                          : "Cancel Enrollment"}
+                          : "Cancel Pending Request"}
 
-                      </button>
+                      </button>}
 
                     </div>
 

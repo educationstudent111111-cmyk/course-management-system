@@ -15,6 +15,7 @@ const Course = {
           SELECT COUNT(*)
           FROM enrollments e
           WHERE e.course_id = c.id
+            AND e.status = 'approved'
         ) AS enrolled_count
 
       FROM courses c
@@ -61,6 +62,7 @@ const Course = {
           SELECT COUNT(*)
           FROM enrollments e
           WHERE e.course_id = c.id
+            AND e.status = 'approved'
         ) AS enrolled_count
 
       FROM courses c
@@ -248,7 +250,8 @@ const Course = {
     const [rows] = await db.execute(
       `SELECT COUNT(*) AS enrolled_count
        FROM enrollments
-       WHERE course_id = ?`,
+       WHERE course_id = ?
+         AND status = 'approved'`,
       [courseId]
     );
 
@@ -326,7 +329,8 @@ const Course = {
       const [countRows] = await connection.execute(
         `SELECT COUNT(*) AS enrolled_count
          FROM enrollments
-         WHERE course_id = ?`,
+         WHERE course_id = ?
+           AND status = 'approved'`,
         [id]
       );
 

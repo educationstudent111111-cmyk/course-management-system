@@ -672,6 +672,34 @@ a:hover {
   color: #92400e;
 }
 
+.enrollment-status.pending {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.enrollment-status.approved {
+  background-color: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.enrollment-status.rejected {
+  background-color: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.enrollment-review-actions {
+  display: grid;
+  gap: 8px;
+  min-width: 190px;
+}
+
+.decision-note {
+  max-width: 240px;
+  margin-top: 4px;
+  color: var(--color-error-text);
+  white-space: normal;
+}
+
 .role-badge {
   display: inline-block;
 

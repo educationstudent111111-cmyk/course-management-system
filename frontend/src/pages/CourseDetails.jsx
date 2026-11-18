@@ -44,6 +44,7 @@ function CourseDetails() {
 
   // CR-006
   const [isEnrolled, setIsEnrolled] = useState(false);
+  const [enrollmentStatus, setEnrollmentStatus] = useState("");
 
   const [checkingEnrollment, setCheckingEnrollment] =
     useState(false);
@@ -128,14 +129,13 @@ function CourseDetails() {
         const enrollments =
           response.data.enrollments || [];
 
-        const enrolled =
-          enrollments.some(
-            (enrollment) =>
-              String(enrollment.course_id) ===
-              String(id)
-          );
+        const enrollment = enrollments.find(
+          (item) => String(item.course_id) === String(id)
+        );
+        const status = enrollment?.status || "";
 
-        setIsEnrolled(enrolled);
+        setEnrollmentStatus(status);
+        setIsEnrolled(status === "pending" || status === "approved");
 
       } catch (error) {
 
@@ -230,11 +230,8 @@ function CourseDetails() {
           }
         );
 
-      setSuccess(
-        response.data.message ||
-        "Course enrollment successful"
-      );
-
+      setSuccess(response.data.message || "Enrollment request submitted.");
+      setEnrollmentStatus("pending");
       setIsEnrolled(true);
 
       await refreshCourse();
@@ -247,19 +244,8 @@ function CourseDetails() {
           error.response?.data?.message ||
           "This course is full. No more students can enroll.";
 
-        if (
-          message
-            .toLowerCase()
-            .includes("already enrolled")
-        ) {
-
-          setIsEnrolled(true);
-
-        } else {
-
-          setIsEnrolled(false);
-
-        }
+        setIsEnrolled(message.toLowerCase().includes("already enrolled") ||
+          message.toLowerCase().includes("request is already pending"));
 
         setError(message);
 
@@ -520,9 +506,9 @@ function CourseDetails() {
 
                   {" "}
 
-                  This course is currently full.
-                  No more students can enroll at
-                  this time.
+                  This course currently has no available seats. You can still
+                  submit a request, but approval depends on availability when
+                  an administrator reviews it.
                 </p>
 
               </div>
@@ -616,8 +602,9 @@ function CourseDetails() {
                       <div className="notice">
 
                         <p>
-                          You are already enrolled
-                          in this course.
+                          {enrollmentStatus === "pending"
+                            ? "Request Pending Approval"
+                            : "You are enrolled in this course."}
                         </p>
 
                         <Link
@@ -636,39 +623,28 @@ function CourseDetails() {
                     )}
 
 
-                  {/* COURSE FULL */}
-
-                  {!checkingEnrollment &&
-                    !isEnrolled &&
-                    isFull && (
-
-                      <div className="notice">
-
-                        <p>
-                          Course Full. Please check
-                          again later if a seat becomes
-                          available.
-                        </p>
-
-                        <Link
-                          to="/courses"
-                          className="btn btn-outline"
-                        >
-                          Back to Courses
-                        </Link>
-
-                      </div>
-
-                    )}
-
-
                   {/* AVAILABLE COURSE */}
 
                   {!checkingEnrollment &&
                     !isEnrolled &&
-                    !isFull && (
+                    (
 
                       <>
+
+                        {enrollmentStatus === "rejected" && (
+                          <p className="notice">
+                            Your previous request was rejected. You may submit
+                            it again for review.
+                          </p>
+                        )}
+
+                        {isFull && (
+                          <p className="notice">
+                            The course is currently full. You may still request
+                            enrollment; approval depends on a seat being
+                            available when reviewed.
+                          </p>
+                        )}
 
                         <button
                           type="button"
@@ -680,8 +656,8 @@ function CourseDetails() {
                           <FaShoppingCart />
 
                           {enrolling
-                            ? "Enrolling..."
-                            : "Enroll Now"}
+                            ? "Submitting..."
+                            : "Request Enrollment"}
 
                         </button>
 

@@ -112,7 +112,13 @@ function AdminDashboard() {
             <span className="dashboard-card-value">
               {reportValue(report?.totalEnrollments)}
             </span>
-            <span className="dashboard-card-label">Total Enrollments</span>
+            <span className="dashboard-card-label">Approved Enrollments</span>
+          </div>
+          <div className="dashboard-card">
+            <span className="dashboard-card-value">
+              {reportValue(report?.pendingEnrollments)}
+            </span>
+            <span className="dashboard-card-label">Pending Requests</span>
           </div>
           <div className="dashboard-card">
             <span className="dashboard-card-value">
@@ -243,6 +249,7 @@ function AdminDashboard() {
                       <th>Category</th>
                       <th>Level</th>
                       <th>Enrolled On</th>
+                      <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -258,6 +265,11 @@ function AdminDashboard() {
                           </span>
                         </td>
                         <td>{formatDate(enrollment.enrolled_at)}</td>
+                        <td>
+                          <span className={`tag enrollment-status ${enrollment.status}`}>
+                            {enrollment.status}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

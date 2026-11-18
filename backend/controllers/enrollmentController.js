@@ -1,5 +1,6 @@
 const Enrollment = require("../models/enrollmentModel");
 const Course = require("../models/courseModel");
+const AuditService = require("../services/auditService");
 
 
 // ======================================================
@@ -98,12 +99,28 @@ const updateEnrollmentStatus = async (req, res) => {
   }
 
   try {
+    const previousData = await AuditService.capture(() =>
+      Enrollment.getForAudit(enrollmentId)
+    );
+
     const result = await Enrollment.updateStatus(
       enrollmentId,
       status,
       req.user.id,
       status === "rejected" ? decisionNote : null
     );
+
+    const updatedData = await AuditService.capture(() =>
+      Enrollment.getForAudit(enrollmentId)
+    );
+
+    await AuditService.record(req, {
+      action: `enrollment.${status}`,
+      entityType: "enrollment",
+      entityId: enrollmentId,
+      previousData,
+      newData: updatedData,
+    });
 
     return res.status(200).json({
       message: `Enrollment request ${status}.`,
@@ -415,6 +432,10 @@ const deleteEnrollment = async (req, res) => {
 
     const { id } = req.params;
 
+    const previousData = await AuditService.capture(() =>
+      Enrollment.getForAudit(id)
+    );
+
 
     // Existing admin delete functionality
     const result =
@@ -426,6 +447,13 @@ const deleteEnrollment = async (req, res) => {
         message: "Only your pending enrollment requests can be cancelled.",
       });
     }
+
+    await AuditService.record(req, {
+      action: "enrollment.deleted",
+      entityType: "enrollment",
+      entityId: id,
+      previousData,
+    });
 
 
     return res.status(200).json({

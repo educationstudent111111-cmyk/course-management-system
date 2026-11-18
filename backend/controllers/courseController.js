@@ -1,6 +1,29 @@
 const Course = require("../models/courseModel");
 const User = require("../models/userModel");
 const validateCourse = require("../helpers/validateCourse");
+const AuditService = require("../services/auditService");
+
+const courseAuditData = (course) => {
+  if (!course) return null;
+
+  const fields = [
+    "id",
+    "title",
+    "category",
+    "level",
+    "duration",
+    "price",
+    "image",
+    "description",
+    "max_students",
+  ];
+
+  return Object.fromEntries(
+    fields
+      .filter((field) => course[field] !== undefined)
+      .map((field) => [field, course[field]])
+  );
+};
 
 
 // =====================================================
@@ -206,6 +229,13 @@ const createCourse = async (req, res) => {
     const courseId =
       await Course.create(course);
 
+    await AuditService.record(req, {
+      action: "course.created",
+      entityType: "course",
+      entityId: courseId,
+      newData: courseAuditData({ id: courseId, ...course }),
+    });
+
 
     return res.status(201).json({
       message: "Course created successfully",
@@ -311,6 +341,14 @@ const updateCourse = async (req, res) => {
     const updatedCourse =
       await Course.getById(id);
 
+    await AuditService.record(req, {
+      action: "course.updated",
+      entityType: "course",
+      entityId: id,
+      previousData: courseAuditData(existingCourse),
+      newData: courseAuditData(updatedCourse),
+    });
+
 
     return res.status(200).json({
       message: "Course updated successfully",
@@ -366,6 +404,13 @@ const deleteCourse = async (req, res) => {
 
 
     await Course.delete(id);
+
+    await AuditService.record(req, {
+      action: "course.deleted",
+      entityType: "course",
+      entityId: id,
+      previousData: courseAuditData(existingCourse),
+    });
 
 
     res.status(200).json({

@@ -4,6 +4,7 @@ import {
   FaBars,
   FaBook,
   FaChartBar,
+  FaClipboardList,
   FaHome,
   FaSignInAlt,
   FaSignOutAlt,
@@ -257,6 +258,15 @@ function Navbar() {
                   <FaUsers />
                   Manage Enrollments
 
+                </NavLink>
+
+                <NavLink
+                  to="/admin/audit-logs"
+                  className={linkClass}
+                  onClick={closeMenu}
+                >
+                  <FaClipboardList />
+                  Audit Logs
                 </NavLink>
 
               </>

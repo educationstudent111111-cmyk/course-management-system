@@ -16,6 +16,7 @@ const userRoutes = require("./routes/userRoutes");
 const courseRoutes = require("./routes/courseRoutes");
 const enrollmentRoutes = require("./routes/enrollmentRoutes");
 const reportRoutes = require("./routes/reportRoutes");
+const auditRoutes = require("./routes/auditRoutes");
 
 // Public authentication routes
 app.use("/api/auth", authRoutes);
@@ -31,6 +32,7 @@ app.use("/api/enrollments", enrollmentRoutes);
 
 // Reporting routes
 app.use("/api/reports", reportRoutes);
+app.use("/api/audit-logs", auditRoutes);
 
 // Start Server
 app.listen(PORT, () => {

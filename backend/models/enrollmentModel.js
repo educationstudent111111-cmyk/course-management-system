@@ -241,6 +241,30 @@ const Enrollment = {
     return rows[0];
   },
 
+  async getForAudit(enrollmentId) {
+    const [rows] = await db.execute(
+      `SELECT
+         e.id,
+         e.student_id,
+         e.course_id,
+         e.enrolled_at,
+         e.status,
+         e.reviewed_by,
+         e.reviewed_at,
+         e.decision_note,
+         u.username AS student_username,
+         c.title AS course_title
+       FROM enrollments e
+       JOIN users u ON u.id = e.student_id
+       JOIN courses c ON c.id = e.course_id
+       WHERE e.id = ?
+       LIMIT 1`,
+      [enrollmentId]
+    );
+
+    return rows[0] || null;
+  },
+
 
   // ======================================================
   // GET MY ENROLLMENTS

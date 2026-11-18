@@ -15,6 +15,7 @@ import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/AdminDashboard";
 import ManageCourses from "./pages/ManageCourses";
 import ManageEnrollments from "./pages/ManageEnrollments";
+import AuditLog from "./pages/AuditLog";
 
 // ---------- Other ----------
 import NotFound from "./pages/NotFound";
@@ -95,6 +96,15 @@ function App() {
           element={
             <ProtectedRoute role="admin">
               <ManageEnrollments />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/audit-logs"
+          element={
+            <ProtectedRoute role="admin">
+              <AuditLog />
             </ProtectedRoute>
           }
         />

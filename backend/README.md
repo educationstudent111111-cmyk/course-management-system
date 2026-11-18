@@ -29,6 +29,7 @@ Reporting endpoints:
 
 GET    /api/reports/overview  (admin only)
 GET    /api/reports/my        (student only; authenticated student's data only)
+GET    /api/audit-logs        (admin only; filterable and paginated)
 
 Enrollment requests start as `pending`; only `approved` rows count toward
 course capacity and confirmed-enrollment reports. Admins may approve or reject
@@ -41,3 +42,17 @@ databases should apply `migrations/003_enrollment_approval.sql` after selecting
 the `course_management` database. The migration adds the review fields,
 converts existing rows to `approved`, and sets `pending` as the default for new
 rows.
+
+## Administrative audit trail
+
+Apply `migrations/004_add_audit_logs.sql` to an existing database. Course
+creation, updates and deletion, plus enrollment approval, rejection and admin
+deletion are recorded with actor, entity, IP address and timestamp. Updates
+include before and after snapshots; password-like fields are removed before
+writing. Audit rows can only be read through the admin-only API; no edit or
+delete endpoint is provided.
+
+Audit writes are best-effort: a failure is logged by the server and does not
+roll back or fail the main business operation. The audit viewer supports
+`entityType`, `entityId`, `actor`, `action`, `from`, `to`, `page` and `limit`
+query parameters.

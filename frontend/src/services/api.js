@@ -61,8 +61,16 @@ api.interceptors.response.use(
       const isLoginRequest =
         requestUrl.includes("/auth/login");
 
+      // An incorrect current password is a normal profile validation error,
+      // not an expired session.
+      const isPasswordChangeRequest =
+        requestUrl.includes("/users/me/password");
 
-      if (!isLoginRequest && !isRedirectingToLogin) {
+      if (
+        !isLoginRequest &&
+        !isPasswordChangeRequest &&
+        !isRedirectingToLogin
+      ) {
 
         isRedirectingToLogin = true;
 
@@ -124,4 +132,3 @@ api.interceptors.response.use(
 
 
 export default api;
-

@@ -145,7 +145,7 @@ const changeMyPassword = async (req, res) => {
     if (typeof newPassword !== "string" || newPassword.length === 0) {
       errors.newPassword = "Enter a new password.";
     } else {
-      if (newPassword.length < 8) {
+      if (Array.from(newPassword).length < 8) {
         errors.newPassword = "Password must be at least 8 characters.";
       }
 

@@ -49,7 +49,7 @@ const Report = {
       FROM courses c
       INNER JOIN enrollments e ON e.course_id = c.id
       GROUP BY c.id, c.title, c.category
-      ORDER BY enrollmentCount DESC, c.id ASC
+      ORDER BY enrollmentCount DESC, c.title ASC, c.id ASC
       LIMIT 5
     `);
 
@@ -91,6 +91,7 @@ const Report = {
         SELECT
           COUNT(e.id) AS enrolledCourses,
           COUNT(DISTINCT c.category) AS distinctCategories,
+          COALESCE(SUM(c.price), 0) AS totalEnrollmentValue,
           MIN(e.enrolled_at) AS earliestEnrollment,
           MAX(e.enrolled_at) AS latestEnrollment
         FROM enrollments e
@@ -107,7 +108,9 @@ const Report = {
           e.enrolled_at AS enrolledAt,
           c.id AS courseId,
           c.title,
-          COALESCE(c.category, 'Uncategorized') AS category
+          COALESCE(c.category, 'Uncategorized') AS category,
+          c.level,
+          c.price
         FROM enrollments e
         INNER JOIN courses c ON c.id = e.course_id
         WHERE e.student_id = ?
@@ -122,9 +125,13 @@ const Report = {
     return {
       enrolledCourses: Number(summary.enrolledCourses || 0),
       distinctCategories: Number(summary.distinctCategories || 0),
+      totalEnrollmentValue: Number(summary.totalEnrollmentValue || 0),
       earliestEnrollment: summary.earliestEnrollment,
       latestEnrollment: summary.latestEnrollment,
-      recentEnrollments: recentRows,
+      recentEnrollments: recentRows.map((row) => ({
+        ...row,
+        price: Number(row.price || 0),
+      })),
     };
   },
 };

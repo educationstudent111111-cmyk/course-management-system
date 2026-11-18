@@ -987,6 +987,42 @@ textarea.input {
   color: var(--color-muted);
 }
 
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.category-breakdown {
+  display: grid;
+  gap: 16px;
+}
+
+.category-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.category-label strong {
+  color: var(--color-dark);
+}
+
+.category-bar-track {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background-color: #e2e8f0;
+}
+
+.category-bar {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background-color: var(--color-primary);
+}
+
 
 /* =========================================
    14. Section cards and tables

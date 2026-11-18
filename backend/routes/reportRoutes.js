@@ -13,14 +13,14 @@ router.use(authMiddleware);
 // Admin-only report
 router.get(
   "/overview",
-  roleMiddleware(["ADMIN"]),
+  roleMiddleware(["admin"]),
   reportController.getOverview
 );
 
 // Logged-in student-only report
 router.get(
   "/my",
-  roleMiddleware(["STUDENT"]),
+  roleMiddleware(["student"]),
   reportController.getMyReport
 );
 

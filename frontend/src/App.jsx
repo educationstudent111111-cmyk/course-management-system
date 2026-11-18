@@ -9,6 +9,7 @@ import CourseDetails from "./pages/CourseDetails";
 // ---------- Student pages ----------
 import StudentDashboard from "./pages/StudentDashboard";
 import MyEnrollments from "./pages/MyEnrollments";
+import Profile from "./pages/Profile";
 
 // ---------- Admin pages ----------
 import AdminDashboard from "./pages/AdminDashboard";
@@ -39,6 +40,14 @@ function App() {
 
         <Route path="/courses/:id" element={<CourseDetails />} />
 
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
 
         {/* STUDENT ROUTES - login required, role = student */}
 

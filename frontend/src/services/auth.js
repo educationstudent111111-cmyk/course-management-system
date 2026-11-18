@@ -10,6 +10,10 @@ export function saveAuth(token, user) {
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
+export function updateStoredUser(user) {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
 
 // =====================================================
 // Read the stored authentication token
@@ -100,4 +104,3 @@ export function isStudent() {
 
   return getUserRole() === "student";
 }
-

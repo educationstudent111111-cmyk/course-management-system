@@ -270,34 +270,45 @@ function Navbar() {
 
           {loggedIn ? (
 
-            <div className="navbar-user">
-
-              <span className="navbar-username">
-
+            <>
+              <NavLink
+                to="/profile"
+                className={linkClass}
+                onClick={closeMenu}
+              >
                 <FaUser />
+                Profile
+              </NavLink>
 
-                <span className="role-badge">
-                  {user?.role}
+              <div className="navbar-user">
+
+                <span className="navbar-username">
+
+                  <FaUser />
+
+                  <span className="role-badge">
+                    {user?.role}
+                  </span>
+
+                  {user?.full_name ||
+                    user?.username}
+
                 </span>
 
-                {user?.full_name ||
-                  user?.username}
 
-              </span>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={handleLogout}
+                >
 
+                  <FaSignOutAlt />
+                  Logout
 
-              <button
-                type="button"
-                className="btn btn-outline"
-                onClick={handleLogout}
-              >
+                </button>
 
-                <FaSignOutAlt />
-                Logout
-
-              </button>
-
-            </div>
+              </div>
+            </>
 
           ) : (
 

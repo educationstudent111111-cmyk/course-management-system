@@ -91,7 +91,6 @@ const getAllCourses = async (req, res) => {
     });
 
   } catch (error) {
-
     console.error(
       "Error getting courses:",
       error.message
@@ -281,38 +280,6 @@ const updateCourse = async (req, res) => {
 
 
     // -------------------------------------------------
-    // Check current approved enrollments
-    // -------------------------------------------------
-    const enrolledCount =
-      await Course.getApprovedEnrollmentCount(id);
-
-
-    // -------------------------------------------------
-    // Prevent capacity below approved enrollment count
-    //
-    // Example:
-    // Approved students = 10
-    // New capacity = 5
-    //
-    // Reject
-    // -------------------------------------------------
-    if (
-      course.max_students !== null &&
-      course.max_students < enrolledCount
-    ) {
-
-      return res.status(400).json({
-        message:
-          `Maximum students cannot be less than the current approved enrollment count (${enrolledCount}).`,
-        errors: {
-          max_students:
-            `Capacity must be at least ${enrolledCount} students.`
-        }
-      });
-    }
-
-
-    // -------------------------------------------------
     // Check duplicate title
     // -------------------------------------------------
     const duplicateCourse =
@@ -337,10 +304,7 @@ const updateCourse = async (req, res) => {
     // -------------------------------------------------
     // Update course
     // -------------------------------------------------
-    await Course.update(
-      id,
-      course
-    );
+    await Course.updateWithCapacityLock(id, course);
 
 
     // Get updated course
@@ -354,6 +318,16 @@ const updateCourse = async (req, res) => {
     });
 
   } catch (error) {
+
+    if (error.code === "CAPACITY_BELOW_ENROLLMENTS") {
+      return res.status(400).json({
+        message: error.message,
+        errors: {
+          max_students:
+            `Capacity must be at least ${error.enrolledCount} students.`,
+        },
+      });
+    }
 
     console.error(
       "Error updating course:",

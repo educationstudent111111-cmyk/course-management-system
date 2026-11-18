@@ -15,7 +15,6 @@ const Course = {
           SELECT COUNT(*)
           FROM enrollments e
           WHERE e.course_id = c.id
-          AND e.status = 'approved'
         ) AS enrolled_count
 
       FROM courses c
@@ -62,7 +61,6 @@ const Course = {
           SELECT COUNT(*)
           FROM enrollments e
           WHERE e.course_id = c.id
-          AND e.status = 'approved'
         ) AS enrolled_count
 
       FROM courses c
@@ -250,8 +248,7 @@ const Course = {
     const [rows] = await db.execute(
       `SELECT COUNT(*) AS enrolled_count
        FROM enrollments
-       WHERE course_id = ?
-       AND status = 'approved'`,
+       WHERE course_id = ?`,
       [courseId]
     );
 
@@ -297,6 +294,97 @@ const Course = {
     );
 
     return result;
+  },
+
+
+  // =====================================================
+  // UPDATE COURSE WITH ATOMIC CAPACITY VALIDATION
+  // =====================================================
+  async updateWithCapacityLock(id, course) {
+
+    const connection = await db.getConnection();
+
+    try {
+
+      await connection.beginTransaction();
+
+      const [courseRows] = await connection.execute(
+        `SELECT id
+         FROM courses
+         WHERE id = ?
+         FOR UPDATE`,
+        [id]
+      );
+
+      if (courseRows.length === 0) {
+
+        const error = new Error("Course not found");
+        error.code = "COURSE_NOT_FOUND";
+        throw error;
+      }
+
+      const [countRows] = await connection.execute(
+        `SELECT COUNT(*) AS enrolled_count
+         FROM enrollments
+         WHERE course_id = ?`,
+        [id]
+      );
+
+      const enrolledCount = Number(
+        countRows[0]?.enrolled_count || 0
+      );
+
+      if (
+        course.max_students !== null &&
+        course.max_students < enrolledCount
+      ) {
+
+        const error = new Error(
+          `Maximum students cannot be less than the current approved enrollment count (${enrolledCount}).`
+        );
+        error.code = "CAPACITY_BELOW_ENROLLMENTS";
+        error.enrolledCount = enrolledCount;
+        throw error;
+      }
+
+      const [result] = await connection.execute(
+        `UPDATE courses
+         SET
+           title = ?,
+           category = ?,
+           level = ?,
+           duration = ?,
+           price = ?,
+           image = ?,
+           description = ?,
+           max_students = ?
+         WHERE id = ?`,
+        [
+          course.title,
+          course.category,
+          course.level,
+          course.duration,
+          course.price,
+          course.image,
+          course.description,
+          course.max_students,
+          id
+        ]
+      );
+
+      await connection.commit();
+
+      return result;
+
+    } catch (error) {
+
+      await connection.rollback();
+      throw error;
+
+    } finally {
+
+      connection.release();
+    }
   }
 
 };

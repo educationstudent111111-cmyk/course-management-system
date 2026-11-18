@@ -3,16 +3,11 @@ const cors = require("cors");
 require("dotenv").config();
 
 const app = express();
-const PORT = 3000;
-
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-
-
-// Parse JSON request bodies
 app.use(express.json());
-
 
 // API Routes
 const authRoutes = require("./routes/authRoutes");
@@ -20,17 +15,22 @@ const authMiddleware = require("./middleware/authMiddleware");
 const userRoutes = require("./routes/userRoutes");
 const courseRoutes = require("./routes/courseRoutes");
 const enrollmentRoutes = require("./routes/enrollmentRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 
-// Public auth routes (login)
+// Public authentication routes
 app.use("/api/auth", authRoutes);
 
-// Course routes - public GET, protected POST/PUT/DELETE (auth per-route)
+// Course routes
 app.use("/api/courses", courseRoutes);
 
-// Protected routes - require valid JWT
+// Protected user routes
 app.use("/api/users", authMiddleware, userRoutes);
+
+// Enrollment routes
 app.use("/api/enrollments", enrollmentRoutes);
 
+// Reporting routes
+app.use("/api/reports", reportRoutes);
 
 // Start Server
 app.listen(PORT, () => {

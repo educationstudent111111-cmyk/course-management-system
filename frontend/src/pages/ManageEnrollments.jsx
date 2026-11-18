@@ -533,9 +533,14 @@ function ManageEnrollments() {
   const totalPages = pagination.totalPages;
 
   const start =
-    total === 0 ? 0 : (page - 1) * limit + 1;
+    enrollments.length === 0
+      ? 0
+      : (page - 1) * limit + 1;
 
-  const end = Math.min(page * limit, total);
+  const end =
+    enrollments.length === 0
+      ? 0
+      : start + enrollments.length - 1;
 
   return (
     <>

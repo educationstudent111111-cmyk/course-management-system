@@ -62,6 +62,26 @@ const enrollInCourse = async (req, res) => {
 
   } catch (error) {
 
+    if (error.code === "COURSE_FULL") {
+      return res.status(409).json({
+        message: error.message,
+        enrolled_count: error.enrolledCount,
+        max_students: error.maxStudents,
+      });
+    }
+
+    if (error.code === "ALREADY_ENROLLED") {
+      return res.status(409).json({
+        message: error.message,
+      });
+    }
+
+    if (error.code === "COURSE_NOT_FOUND") {
+      return res.status(404).json({
+        message: error.message,
+      });
+    }
+
     console.error(
       "Error enrolling in course:",
       error.message

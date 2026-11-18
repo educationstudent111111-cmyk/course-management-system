@@ -16,7 +16,11 @@ CREATE TABLE IF NOT EXISTS users (
 
     full_name VARCHAR(100) NOT NULL,
 
-    role ENUM('admin', 'student') NOT NULL
+    role ENUM('admin', 'student') NOT NULL,
+
+    -- CR-008: Student name and username search
+    INDEX idx_users_full_name (full_name),
+    INDEX idx_users_username (username)
 );
 
 
@@ -80,5 +84,10 @@ CREATE TABLE IF NOT EXISTS enrollments (
     FOREIGN KEY (course_id)
         REFERENCES courses(id)
         ON DELETE CASCADE
-        ON UPDATE CASCADE
+        ON UPDATE CASCADE,
+
+    -- CR-008: Indexes for course/date filtering and sorting
+    INDEX idx_enrollments_course_id (course_id),
+    INDEX idx_enrollments_enrolled_at (enrolled_at),
+    INDEX idx_enrollments_course_date (course_id, enrolled_at)
 );
